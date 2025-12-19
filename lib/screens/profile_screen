@@ -1,0 +1,344 @@
+import 'package:flutter/material.dart';
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Profile',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2E7D32),
+            fontSize: 22,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const ProfileHeader(),
+            const SizedBox(height: 16),
+            ProfileMenuSection(
+              title: 'Account',
+              items: [
+                ProfileMenuItem(
+                  icon: Icons.person_outline,
+                  title: 'Edit Profile',
+                  onTap: () {},
+                ),
+                ProfileMenuItem(
+                  icon: Icons.family_restroom,
+                  title: 'Family Members',
+                  onTap: () {},
+                ),
+                ProfileMenuItem(
+                  icon: Icons.location_on_outlined,
+                  title: 'Saved Addresses',
+                  onTap: () {},
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ProfileMenuSection(
+              title: 'Orders & Reports',
+              items: [
+                ProfileMenuItem(
+                  icon: Icons.shopping_bag_outlined,
+                  title: 'My Orders',
+                  onTap: () {},
+                ),
+                ProfileMenuItem(
+                  icon: Icons.description_outlined,
+                  title: 'My Reports',
+                  onTap: () {},
+                ),
+                ProfileMenuItem(
+                  icon: Icons.history,
+                  title: 'Order History',
+                  onTap: () {},
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ProfileMenuSection(
+              title: 'Support',
+              items: [
+                ProfileMenuItem(
+                  icon: Icons.help_outline,
+                  title: 'Help & Support',
+                  onTap: () {},
+                ),
+                ProfileMenuItem(
+                  icon: Icons.info_outline,
+                  title: 'About Us',
+                  onTap: () {},
+                ),
+                ProfileMenuItem(
+                  icon: Icons.privacy_tip_outlined,
+                  title: 'Privacy Policy',
+                  onTap: () {},
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ProfileMenuSection(
+              title: 'Settings',
+              items: [
+                ProfileMenuItem(
+                  icon: Icons.notifications_outlined,
+                  title: 'Notifications',
+                  trailing: Switch(
+                    value: true,
+                    onChanged: (value) {},
+                    activeColor: const Color(0xFF2E7D32),
+                  ),
+                  onTap: null,
+                ),
+                ProfileMenuItem(
+                  icon: Icons.language,
+                  title: 'Language',
+                  subtitle: 'English',
+                  onTap: () {},
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: OutlinedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.logout),
+                label: const Text('Logout'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFD32F2F),
+                  side: const BorderSide(color: Color(0xFFD32F2F)),
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Version 1.0.0',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileHeader extends StatelessWidget {
+  const ProfileHeader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+      ),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: const Color(0xFFE8F5E9),
+                child: const Icon(
+                  Icons.person,
+                  size: 50,
+                  color: Color(0xFF2E7D32),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2E7D32),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Guest User',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B5E20),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'guest@aashamedix.com',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '+91 98765 43210',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ProfileMenuSection extends StatelessWidget {
+  final String title;
+  final List<ProfileMenuItem> items;
+
+  const ProfileMenuSection({
+    super.key,
+    required this.title,
+    required this.items,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B5E20),
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          ...items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return Column(
+              children: [
+                item,
+                if (index < items.length - 1) const Divider(height: 1),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class ProfileMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  const ProfileMenuItem({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap ?? () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$title - Coming soon!'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: const Color(0xFF2E7D32),
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF1B5E20),
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            trailing ??
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}

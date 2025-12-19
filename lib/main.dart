@@ -1,0 +1,727 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'screens/main_navigation.dart';
+import 'l10n/app_localizations.dart';
+import 'providers/locale_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/booking_provider.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Status bar styling for professional medical app look
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+  // Lock to portrait mode for better medical app UX
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  runApp(const AashaMedixApp());
+}
+
+class AashaMedixApp extends StatelessWidget {
+  const AashaMedixApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => LocaleProvider()),
+        ChangeNotifierProvider(create: (context) => AuthProvider()),
+        ChangeNotifierProvider(create: (context) => BookingProvider()),
+      ],
+      child: Consumer3<LocaleProvider, AuthProvider, BookingProvider>(
+        builder: (context, localeProvider, authProvider, bookingProvider, child) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'AASHA MEDIX',
+
+            // Localization Configuration
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'), // English
+              Locale('te'), // Telugu
+              Locale('hi'), // Hindi
+            ],
+            locale: localeProvider.locale,
+
+            // Complete Material 3 Theme Configuration
+            theme: ThemeData(
+              // Enable Material 3 Design System
+              useMaterial3: true,
+
+              // Professional Medical App Color Scheme (Balanced Teal Palette)
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF00695C), // Teal for medical trust
+                primary: const Color(0xFF00695C),
+                primaryContainer: const Color(0xFFB2DFDB),
+                secondary: const Color(0xFF26A69A),
+                secondaryContainer: const Color(0xFFE0F2F1),
+                tertiary: const Color(0xFF66BB6A),
+                surface: Colors.white,
+                surfaceContainerHighest: const Color(0xFFF5F5F5),
+                error: const Color(0xFFD32F2F),
+                errorContainer: const Color(0xFFFFCDD2),
+                onPrimary: Colors.white,
+                onPrimaryContainer: const Color(0xFF1B5E20),
+                onSecondary: Colors.white,
+                onSecondaryContainer: const Color(0xFF2E7D32),
+                onSurface: const Color(0xFF1B5E20),
+                onSurfaceVariant: const Color(0xFF616161),
+                onError: Colors.white,
+                onErrorContainer: const Color(0xFFB71C1C),
+                outline: const Color(0xFFE0E0E0),
+                outlineVariant: const Color(0xFFF5F5F5),
+                shadow: const Color(0x1A000000),
+                brightness: Brightness.light,
+              ),
+
+              // Scaffold Background
+              scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+
+              // AppBar Theme - Clean Medical Professional Look
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.white,
+                foregroundColor: Color(0xFF2E7D32),
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                centerTitle: false,
+                iconTheme: IconThemeData(color: Color(0xFF2E7D32), size: 24),
+                actionsIconTheme: IconThemeData(
+                  color: Color(0xFF2E7D32),
+                  size: 24,
+                ),
+                titleTextStyle: TextStyle(
+                  color: Color(0xFF2E7D32),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                  fontFamily: 'Roboto',
+                ),
+                systemOverlayStyle: SystemUiOverlayStyle(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.dark,
+                  systemNavigationBarColor: Colors.white,
+                  systemNavigationBarIconBrightness: Brightness.dark,
+                ),
+              ),
+
+              // Card Theme - Modern Elevated Cards
+              cardTheme: CardThemeData(
+                color: Colors.white,
+                elevation: 2,
+                shadowColor: const Color(0x1A000000),
+                surfaceTintColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                margin: const EdgeInsets.all(8),
+                clipBehavior: Clip.antiAlias,
+              ),
+
+              // Elevated Button Theme - Primary Action Buttons
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shadowColor: const Color(0x33000000),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
+                  minimumSize: const Size(88, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+
+              // Filled Button Theme - Alternative Primary Buttons
+              filledButtonTheme: FilledButtonThemeData(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
+                  minimumSize: const Size(88, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+
+              // Outlined Button Theme - Secondary Actions
+              outlinedButtonTheme: OutlinedButtonThemeData(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF2E7D32),
+                  side: const BorderSide(color: Color(0xFF2E7D32), width: 1.5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
+                  minimumSize: const Size(88, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+
+              // Text Button Theme - Tertiary Actions
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF2E7D32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  minimumSize: const Size(64, 40),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+
+              // Floating Action Button Theme
+              floatingActionButtonTheme: const FloatingActionButtonThemeData(
+                backgroundColor: Color(0xFF2E7D32),
+                foregroundColor: Colors.white,
+                elevation: 4,
+                focusElevation: 6,
+                hoverElevation: 6,
+                highlightElevation: 8,
+                shape: CircleBorder(),
+              ),
+
+              // Input Decoration Theme - Forms & Text Fields
+              inputDecorationTheme: InputDecorationTheme(
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFE0E0E0),
+                    width: 1,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFE0E0E0),
+                    width: 1,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF2E7D32),
+                    width: 2,
+                  ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFD32F2F),
+                    width: 1.5,
+                  ),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFD32F2F),
+                    width: 2,
+                  ),
+                ),
+                disabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFEEEEEE),
+                    width: 1,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                hintStyle: const TextStyle(
+                  color: Color(0xFF9E9E9E),
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal,
+                ),
+                labelStyle: const TextStyle(
+                  color: Color(0xFF616161),
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal,
+                ),
+                floatingLabelStyle: const TextStyle(
+                  color: Color(0xFF2E7D32),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                errorStyle: const TextStyle(
+                  color: Color(0xFFD32F2F),
+                  fontSize: 12,
+                ),
+                helperStyle: const TextStyle(
+                  color: Color(0xFF757575),
+                  fontSize: 12,
+                ),
+              ),
+
+              // Icon Theme
+              iconTheme: const IconThemeData(
+                color: Color(0xFF2E7D32),
+                size: 24,
+              ),
+
+              // Primary Icon Theme
+              primaryIconTheme: const IconThemeData(
+                color: Color(0xFF2E7D32),
+                size: 24,
+              ),
+
+              // Divider Theme
+              dividerTheme: const DividerThemeData(
+                color: Color(0xFFE0E0E0),
+                thickness: 1,
+                space: 16,
+              ),
+
+              // Bottom Navigation Bar Theme
+              bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+                backgroundColor: Colors.white,
+                selectedItemColor: Color(0xFF2E7D32),
+                unselectedItemColor: Color(0xFF9E9E9E),
+                selectedLabelStyle: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                unselectedLabelStyle: TextStyle(
+                  fontWeight: FontWeight.normal,
+                  fontSize: 12,
+                ),
+                type: BottomNavigationBarType.fixed,
+                elevation: 8,
+                showSelectedLabels: true,
+                showUnselectedLabels: true,
+              ),
+
+              // Navigation Bar Theme (Material 3)
+              navigationBarTheme: NavigationBarThemeData(
+                backgroundColor: Colors.white,
+                indicatorColor: const Color(0x1F2E7D32),
+                surfaceTintColor: Colors.transparent,
+                elevation: 3,
+                height: 80,
+                labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const TextStyle(
+                      color: Color(0xFF2E7D32),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    );
+                  }
+                  return const TextStyle(
+                    color: Color(0xFF9E9E9E),
+                    fontWeight: FontWeight.normal,
+                    fontSize: 12,
+                  );
+                }),
+                iconTheme: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const IconThemeData(
+                      color: Color(0xFF2E7D32),
+                      size: 24,
+                    );
+                  }
+                  return const IconThemeData(
+                    color: Color(0xFF9E9E9E),
+                    size: 24,
+                  );
+                }),
+              ),
+
+              // List Tile Theme
+              listTileTheme: const ListTileThemeData(
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                iconColor: Color(0xFF2E7D32),
+                textColor: Color(0xFF424242),
+                tileColor: Colors.transparent,
+                selectedTileColor: Color(0xFFE8F5E9),
+                selectedColor: Color(0xFF2E7D32),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+              ),
+
+              // Chip Theme
+              chipTheme: ChipThemeData(
+                backgroundColor: const Color(0xFFF5F5F5),
+                selectedColor: const Color(0xFF2E7D32),
+                disabledColor: const Color(0xFFE0E0E0),
+                deleteIconColor: const Color(0xFF616161),
+                labelStyle: const TextStyle(
+                  color: Color(0xFF424242),
+                  fontSize: 14,
+                ),
+                secondaryLabelStyle: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+                brightness: Brightness.light,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                side: const BorderSide(color: Colors.transparent),
+              ),
+
+              // Dialog Theme - Fixed: Using DialogThemeData
+              dialogTheme: const DialogThemeData(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                elevation: 8,
+                shadowColor: Color(0x33000000),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(20)),
+                ),
+                alignment: Alignment.center,
+                titleTextStyle: TextStyle(
+                  color: Color(0xFF1B5E20),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.15,
+                ),
+                contentTextStyle: TextStyle(
+                  color: Color(0xFF424242),
+                  fontSize: 14,
+                  letterSpacing: 0.25,
+                ),
+              ),
+
+              // Bottom Sheet Theme
+              bottomSheetTheme: const BottomSheetThemeData(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                elevation: 8,
+                modalElevation: 16,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                constraints: BoxConstraints(maxWidth: 640),
+              ),
+
+              // Snackbar Theme
+              snackBarTheme: const SnackBarThemeData(
+                backgroundColor: Color(0xFF323232),
+                contentTextStyle: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  letterSpacing: 0.25,
+                ),
+                behavior: SnackBarBehavior.floating,
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+                actionTextColor: Color(0xFF4CAF50),
+              ),
+
+              // Banner Theme
+              bannerTheme: const MaterialBannerThemeData(
+                backgroundColor: Color(0xFFE8F5E9),
+                contentTextStyle: TextStyle(
+                  color: Color(0xFF1B5E20),
+                  fontSize: 14,
+                ),
+                padding: EdgeInsets.all(16),
+              ),
+
+              // Progress Indicator Theme
+              progressIndicatorTheme: const ProgressIndicatorThemeData(
+                color: Color(0xFF2E7D32),
+                linearTrackColor: Color(0xFFE0E0E0),
+                circularTrackColor: Color(0xFFE0E0E0),
+                refreshBackgroundColor: Colors.white,
+              ),
+
+              // Slider Theme
+              sliderTheme: const SliderThemeData(
+                activeTrackColor: Color(0xFF2E7D32),
+                inactiveTrackColor: Color(0xFFE0E0E0),
+                thumbColor: Color(0xFF2E7D32),
+                overlayColor: Color(0x1F2E7D32),
+                valueIndicatorColor: Color(0xFF2E7D32),
+                valueIndicatorTextStyle: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+
+              // Switch Theme
+              switchTheme: SwitchThemeData(
+                thumbColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const Color(0xFF2E7D32);
+                  }
+                  if (states.contains(WidgetState.disabled)) {
+                    return const Color(0xFFBDBDBD);
+                  }
+                  return const Color(0xFFBDBDBD);
+                }),
+                trackColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const Color(0x7F2E7D32);
+                  }
+                  if (states.contains(WidgetState.disabled)) {
+                    return const Color(0xFFE0E0E0);
+                  }
+                  return const Color(0xFFE0E0E0);
+                }),
+                trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+              ),
+
+              // Checkbox Theme
+              checkboxTheme: CheckboxThemeData(
+                fillColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const Color(0xFF2E7D32);
+                  }
+                  if (states.contains(WidgetState.disabled)) {
+                    return const Color(0xFFBDBDBD);
+                  }
+                  return Colors.transparent;
+                }),
+                checkColor: WidgetStateProperty.all(Colors.white),
+                side: const BorderSide(color: Color(0xFF9E9E9E), width: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+
+              // Radio Theme
+              radioTheme: RadioThemeData(
+                fillColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return const Color(0xFF2E7D32);
+                  }
+                  if (states.contains(WidgetState.disabled)) {
+                    return const Color(0xFFBDBDBD);
+                  }
+                  return const Color(0xFF9E9E9E);
+                }),
+              ),
+
+              // Tooltip Theme
+              tooltipTheme: const TooltipThemeData(
+                decoration: BoxDecoration(
+                  color: Color(0xFF616161),
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+                textStyle: TextStyle(color: Colors.white, fontSize: 12),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                waitDuration: Duration(milliseconds: 500),
+              ),
+
+              // Badge Theme
+              badgeTheme: const BadgeThemeData(
+                backgroundColor: Color(0xFFD32F2F),
+                textColor: Colors.white,
+                smallSize: 6,
+                largeSize: 16,
+                padding: EdgeInsets.symmetric(horizontal: 4),
+              ),
+
+              // Tabs Theme
+              tabBarTheme: const TabBarThemeData(
+                labelColor: Color(0xFF2E7D32),
+                unselectedLabelColor: Color(0xFF9E9E9E),
+                indicatorColor: Color(0xFF2E7D32),
+                indicatorSize: TabBarIndicatorSize.label,
+                labelStyle: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+                unselectedLabelStyle: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+
+              // Font Family
+              fontFamily: 'Roboto',
+
+              // Complete Text Theme for Medical App
+              textTheme: const TextTheme(
+                // Display styles - Large headings
+                displayLarge: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B5E20),
+                  letterSpacing: -0.5,
+                  height: 1.2,
+                ),
+                displayMedium: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B5E20),
+                  letterSpacing: -0.25,
+                  height: 1.2,
+                ),
+                displaySmall: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B5E20),
+                  letterSpacing: 0,
+                  height: 1.3,
+                ),
+
+                // Headline styles - Section headings
+                headlineLarge: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1B5E20),
+                  letterSpacing: 0,
+                  height: 1.3,
+                ),
+                headlineMedium: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1B5E20),
+                  letterSpacing: 0.15,
+                  height: 1.3,
+                ),
+                headlineSmall: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1B5E20),
+                  letterSpacing: 0.15,
+                  height: 1.4,
+                ),
+
+                // Title styles - Card titles, dialog titles
+                titleLarge: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1B5E20),
+                  letterSpacing: 0.15,
+                  height: 1.4,
+                ),
+                titleMedium: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF1B5E20),
+                  letterSpacing: 0.15,
+                  height: 1.4,
+                ),
+                titleSmall: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF1B5E20),
+                  letterSpacing: 0.1,
+                  height: 1.4,
+                ),
+
+                // Body styles - Main content
+                bodyLarge: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.normal,
+                  color: Color(0xFF424242),
+                  letterSpacing: 0.5,
+                  height: 1.5,
+                ),
+                bodyMedium: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal,
+                  color: Color(0xFF616161),
+                  letterSpacing: 0.25,
+                  height: 1.5,
+                ),
+                bodySmall: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                  color: Color(0xFF757575),
+                  letterSpacing: 0.4,
+                  height: 1.5,
+                ),
+
+                // Label styles - Buttons, tabs
+                labelLarge: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                  height: 1.4,
+                ),
+                labelMedium: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                  height: 1.4,
+                ),
+                labelSmall: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            home: const MainNavigation(),
+          );
+        },
+      ),
+    );
+  }
+}

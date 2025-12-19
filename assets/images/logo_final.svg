@@ -1,0 +1,14 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Medical Cross -->
+  <g transform="translate(10, 15)">
+    <rect x="12" y="5" width="6" height="20" fill="#E30011" rx="1"/>
+    <rect x="5" y="12" width="20" height="6" fill="#E30011" rx="1"/>
+  </g>
+
+  <!-- AASHA MEDIX Text -->
+  <text x="50" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#00942A">AASHA</text>
+  <text x="50" y="45" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#E30011">MEDIX</text>
+
+  <!-- Decorative line -->
+  <line x1="45" y1="28" x2="120" y2="28" stroke="#00942A" stroke-width="1" opacity="0.5"/>
+</svg>
