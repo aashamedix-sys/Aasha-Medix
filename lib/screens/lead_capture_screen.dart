@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../services/webhook_service.dart';
+import '../widgets/app_logo.dart';
 
 class LeadCaptureScreen extends StatefulWidget {
   const LeadCaptureScreen({super.key});
@@ -96,10 +96,17 @@ class _LeadCaptureScreenState extends State<LeadCaptureScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SvgPicture.asset('assets/images/logo_final.svg', height: 32, width: 32),
+            const AppLogo(size: 32),
             const SizedBox(width: 8),
-            const Text('AASHA MEDIX'),
+            const Flexible(
+              child: Text(
+                'AASHA MEDIX',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         centerTitle: true,
@@ -159,6 +166,7 @@ class _LeadCaptureScreenState extends State<LeadCaptureScreen> {
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           initialValue: _selectedService,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Service',
                             border: OutlineInputBorder(),
@@ -166,7 +174,11 @@ class _LeadCaptureScreenState extends State<LeadCaptureScreen> {
                           items: _services.map((service) {
                             return DropdownMenuItem(
                               value: service,
-                              child: Text(service),
+                              child: Text(
+                                service,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -182,6 +194,7 @@ class _LeadCaptureScreenState extends State<LeadCaptureScreen> {
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           initialValue: _selectedVisitType,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText:
                                 'How would you like your samples collected?',
@@ -190,7 +203,11 @@ class _LeadCaptureScreenState extends State<LeadCaptureScreen> {
                           items: _visitTypes.map((type) {
                             return DropdownMenuItem(
                               value: type,
-                              child: Text(type),
+                              child: Text(
+                                type,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             );
                           }).toList(),
                           onChanged: (value) {

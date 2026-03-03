@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../widgets/test_card.dart';
 import '../models/test_model.dart';
 import '../utils/colors.dart';
-import 'booking_confirmation_screen.dart';
 import 'search_screen.dart';
 import 'cart_screen.dart';
 
@@ -29,11 +28,13 @@ class _ServicesScreenState extends State<ServicesScreen> {
   String _selectedCategory = 'All';
 
   void _bookTest(TestModel test) {
-    // Navigate to booking confirmation screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BookingConfirmationScreen(test: test),
+    // Navigate to booking confirmation screen - Create a temporary booking model
+    // NOTE: Update to use new booking flow via diagnostics_screen
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please use Diagnostics tab to book tests'),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -290,7 +291,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(
+            child: Text(value, overflow: TextOverflow.ellipsis, maxLines: 2),
+          ),
         ],
       ),
     );

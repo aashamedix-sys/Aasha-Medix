@@ -1,14 +1,25 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("com.google.gms.google-services")
+    // Flutter Gradle plugin MUST be last
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace = "com.example.aasha_medix"
-    compileSdk = 36  // Updated to API 36 for latest plugin compatibility
+    namespace = "com.aashamedix.healthcare"
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
+
+    defaultConfig {
+        applicationId = "com.aashamedix.healthcare"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -17,33 +28,36 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
-    kotlin {
-        compilerOptions {
-            // Fix Kotlin daemon cache issues
-            freeCompilerArgs.addAll(listOf(
-                "-Xskip-metadata-version-check",
-                "-Xallow-result-return-type"
-            ))
-        }
-    }
-
-    defaultConfig {
-        // Unique Application ID for AASHA MEDIX healthcare app
-        applicationId = "com.aashamedix.healthcare"
-        // Minimum SDK version for Android 8.0+ compatibility
-        minSdk = 26
-        targetSdk = 36
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        jvmTarget = "17"
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // 🔐 Release signing (optional for now)
+            val keystoreProperties = Properties()
+            val keystorePropertiesFile = rootProject.file("key.properties")
+
+            if (keystorePropertiesFile.exists()) {
+                keystorePropertiesFile.inputStream().use {
+                    keystoreProperties.load(it)
+                }
+
+                signingConfig = signingConfigs.create("release") {
+                    keyAlias = keystoreProperties["keyAlias"] as String
+                    keyPassword = keystoreProperties["keyPassword"] as String
+                    storeFile = file(keystoreProperties["storeFile"] as String)
+                    storePassword = keystoreProperties["storePassword"] as String
+                }
+            } else {
+                // Local testing fallback
+                signingConfig = signingConfigs.getByName("debug")
+            }
+
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+
+        debug {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -56,3 +70,4 @@ dependencies {
 flutter {
     source = "../.."
 }
+

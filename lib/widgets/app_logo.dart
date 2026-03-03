@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class AppLogo extends StatelessWidget {
   final double size;
@@ -12,31 +11,24 @@ class AppLogo extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: SvgPicture.asset(
-        'assets/images/logo_final.svg',
+      child: Image.asset(
+        'assets/images/logo_final.png',
         width: size,
         height: size,
-        colorFilter: color != null
-            ? ColorFilter.mode(color!, BlendMode.srcIn)
-            : null,
-        placeholderBuilder: (BuildContext context) => Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: color ?? Theme.of(context).primaryColor,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Center(
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Center(
             child: Text(
-              'A',
+              'Aasha Medix',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white,
-                fontSize: size * 0.6,
+                fontSize: size * 0.3,
                 fontWeight: FontWeight.bold,
+                color: color ?? Theme.of(context).colorScheme.primary,
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

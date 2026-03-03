@@ -56,6 +56,7 @@ class DiagnosticsData {
         price: 300.0,
         description:
             'Comprehensive test for gestational diabetes and insulin resistance.',
+        isActive: false,
       ),
 
       // CBC & Hematology

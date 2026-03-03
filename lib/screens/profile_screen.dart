@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../utils/colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../providers/auth_provider.dart';
-import 'edit_profile_screen.dart';
+import '../utils/colors.dart';
 import 'change_password_screen.dart';
-import 'privacy_settings_screen.dart';
 import 'help_support_screen.dart';
+import 'privacy_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,6 +16,87 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _ageController = TextEditingController();
+  final _addressController = TextEditingController();
+
+  String? _gender;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocalProfile();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _ageController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadLocalProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    setState(() {
+      _nameController.text = prefs.getString('profile_name') ?? '';
+      _phoneController.text = prefs.getString('profile_phone') ?? '';
+      _emailController.text = prefs.getString('profile_email') ?? '';
+      _ageController.text = prefs.getString('profile_age') ?? '';
+      _gender = prefs.getString('profile_gender');
+      _addressController.text = prefs.getString('profile_address') ?? '';
+    });
+  }
+
+  Future<void> _saveLocalProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setString('profile_name', _nameController.text.trim());
+      await prefs.setString('profile_phone', _phoneController.text.trim());
+      await prefs.setString('profile_email', _emailController.text.trim());
+      await prefs.setString('profile_age', _ageController.text.trim());
+      if (_gender != null) {
+        await prefs.setString('profile_gender', _gender!);
+      }
+      await prefs.setString('profile_address', _addressController.text.trim());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile saved successfully.'),
+            backgroundColor: Color(0xFF2E7D32),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -24,276 +106,226 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final initials = (user.name ?? user.phoneNumber)
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .take(2)
+        .map((p) => p[0].toUpperCase())
+        .join();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.primary,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditProfileScreen(user: user),
-                ),
-              );
-            },
-          ),
-        ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Profile Header
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(46, 125, 50, 0.05),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppColors.primary,
-                    child: Text(
-                      (user.name ?? 'U').split(' ').map((e) => e[0]).join(),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 44,
+                      backgroundColor: AppColors.primary,
+                      child: Text(
+                        initials.isEmpty ? 'U' : initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      user.name ?? 'Patient',
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user.email ?? user.phoneNumber,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.all(16),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Basic Profile',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Name',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _phoneController,
+                            decoration: const InputDecoration(
+                              labelText: 'Phone',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.phone,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _emailController,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownMenu<String>(
+                                  width: double.infinity,
+                                  initialSelection: _gender,
+                                  label: const Text('Gender'),
+                                  dropdownMenuEntries: const [
+                                    DropdownMenuEntry(
+                                      value: 'Male',
+                                      label: 'Male',
+                                    ),
+                                    DropdownMenuEntry(
+                                      value: 'Female',
+                                      label: 'Female',
+                                    ),
+                                    DropdownMenuEntry(
+                                      value: 'Other',
+                                      label: 'Other',
+                                    ),
+                                  ],
+                                  onSelected: (v) =>
+                                      setState(() => _gender = v),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _ageController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Age',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _addressController,
+                            decoration: const InputDecoration(
+                              labelText: 'Address',
+                              border: OutlineInputBorder(),
+                            ),
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: _isSaving ? null : _saveLocalProfile,
+                            child: _isSaving
+                                ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Save Profile'),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    user.name ?? 'User',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1B5E20),
+                ),
+              ),
+
+              // Account Actions
+              Container(
+                margin: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildActionButton('Change Password', Icons.lock, () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChangePasswordScreen(),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 12),
+                    _buildActionButton(
+                      'Privacy Settings',
+                      Icons.privacy_tip,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PrivacySettingsScreen(),
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.email ?? 'No email',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    _buildActionButton('Help & Support', Icons.help, () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HelpSupportScreen(),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 12),
+                    _buildActionButton('Logout', Icons.logout, () {
+                      _showLogoutDialog();
+                    }, isDestructive: true),
+                  ],
+                ),
               ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Profile Options
-            _buildProfileSection('Personal Information', [
-              _buildProfileItem(
-                'Full Name',
-                user.name ?? 'Not provided',
-                Icons.person,
-              ),
-              _buildProfileItem(
-                'Email',
-                user.email ?? 'Not provided',
-                Icons.email,
-              ),
-              _buildProfileItem('Phone', user.phoneNumber, Icons.phone),
-              _buildProfileItem(
-                'Age',
-                user.age?.toString() ?? 'Not provided',
-                Icons.calendar_today,
-              ),
-              _buildProfileItem(
-                'Gender',
-                user.gender ?? 'Not provided',
-                Icons.people,
-              ),
-            ]),
-
-            _buildProfileSection('Contact & Address', [
-              _buildProfileItem(
-                'Address',
-                user.address ?? 'Not provided',
-                Icons.location_on,
-              ),
-            ]),
-
-            // Medical Information
-            _buildProfileSection('Medical Information', [
-              _buildProfileItem('Blood Group', 'O+', Icons.bloodtype),
-              _buildProfileItem('Allergies', 'None', Icons.warning),
-              _buildProfileItem(
-                'Chronic Conditions',
-                'None',
-                Icons.medical_services,
-              ),
-              _buildProfileItem(
-                'Current Medications',
-                'None',
-                Icons.medication,
-              ),
-            ]),
-
-            // Emergency Contacts
-            _buildProfileSection('Emergency Contacts', [
-              _buildProfileItem(
-                'Primary Contact',
-                '+91 9876543211\nJane Doe (Wife)',
-                Icons.contact_emergency,
-              ),
-              _buildProfileItem(
-                'Secondary Contact',
-                '+91 9876543212\nMike Doe (Brother)',
-                Icons.contact_phone,
-              ),
-            ]),
-
-            // Recent Activity
-            _buildProfileSection('Recent Activity', [
-              _buildActivityItem(
-                'Blood Test Booked',
-                '2 days ago',
-                Icons.science,
-              ),
-              _buildActivityItem(
-                'Report Downloaded',
-                '5 days ago',
-                Icons.download,
-              ),
-              _buildActivityItem(
-                'Appointment Completed',
-                '1 week ago',
-                Icons.check_circle,
-              ),
-            ]),
-
-            // Account Actions
-            Container(
-              margin: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildActionButton('Change Password', Icons.lock, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ChangePasswordScreen(),
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 12),
-                  _buildActionButton('Privacy Settings', Icons.privacy_tip, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PrivacySettingsScreen(),
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 12),
-                  _buildActionButton('Help & Support', Icons.help, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HelpSupportScreen(),
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 12),
-                  _buildActionButton('Logout', Icons.logout, () {
-                    _showLogoutDialog();
-                  }, isDestructive: true),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildProfileSection(String title, List<Widget> items) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 8),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1B5E20),
-              ),
-            ),
-          ),
-          Card(child: Column(children: items)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileItem(String label, String value, IconData icon) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primary),
-      title: Text(
-        label,
-        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-      ),
-      subtitle: Text(
-        value,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-      ),
-    );
-  }
-
-  Widget _buildActivityItem(String title, String subtitle, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(icon, color: AppColors.primary, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -359,7 +391,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _logout() async {
+  Future<void> _logout() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.signOut();
 
@@ -372,6 +404,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    // Navigation will happen automatically due to auth state change
+    // Navigation happens automatically due to auth state change.
   }
 }

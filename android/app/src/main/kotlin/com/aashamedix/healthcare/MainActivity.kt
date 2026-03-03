@@ -1,4 +1,4 @@
-package com.example.aasha_medix
+package com.aashamedix.healthcare
 
 import io.flutter.embedding.android.FlutterActivity
 

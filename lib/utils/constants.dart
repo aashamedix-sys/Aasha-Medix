@@ -17,5 +17,17 @@ class AppConstants {
   // Notification channels
   static const String notificationChannelId = 'aasha_medix_channel';
   static const String notificationChannelName = 'AASHA MEDIX';
-  static const String notificationChannelDescription = 'Medical app notifications';
+  static const String notificationChannelDescription =
+      'Medical app notifications';
+
+  // Backend Sync (Step 2.4A: Google Sheets)
+  // Make.com webhook for patient data collection
+  static const String googleSheetsWebhookUrl =
+      'https://hook.eu2.make.com/781nmlxgteqkuh0g1zft2ktrwrddesbc';
+
+  // Retry configuration for backend sync
+  static const int syncMaxRetries = 3;
+  static const Duration syncRetryInitialDelay = Duration(seconds: 5);
+  static const int syncRetryBackoffMultiplier = 5;
+  static const Duration syncHttpTimeout = Duration(seconds: 10);
 }

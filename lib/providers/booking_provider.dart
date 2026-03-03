@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/booking_model.dart';
+import '../services/backend_sync_service.dart';
 
 class BookingProvider with ChangeNotifier {
   BookingModel? _latestBooking;
@@ -52,6 +53,14 @@ class BookingProvider with ChangeNotifier {
 
     // Store the booking locally
     _latestBooking = newBooking;
+
+    // Trigger backend sync (fire and forget - no await, no block)
+    // This will queue the booking for sync to Google Sheets with retry logic
+    try {
+      BackendSyncService().enqueueBooking(newBooking);
+    } catch (e) {
+      debugPrint('[BookingProvider] Background sync error (non-blocking): $e');
+    }
 
     // Notify listeners about the new booking
     notifyListeners();

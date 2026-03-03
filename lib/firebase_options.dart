@@ -47,28 +47,32 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'your-api-key',
-    appId: 'your-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    storageBucket: 'your-storage-bucket',
+    apiKey: 'AIzaSyB6nQ2wOrB2gAR7EIbQhxNd8g5pIEkp50g',
+    appId: '1:995336050104:android:cab5181af349455046eb4d',
+    messagingSenderId: '995336050104',
+    projectId: 'aasha-medix-43956',
+    storageBucket: 'aasha-medix-43956.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'your-api-key',
-    appId: 'your-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    storageBucket: 'your-storage-bucket',
-    iosBundleId: 'your-bundle-id',
+    // NOTE: Replace with your Firebase iOS app credentials
+    // Get from: Firebase Console > Project Settings > Your iOS App
+    apiKey: 'YOUR_ACTUAL_IOS_API_KEY_HERE',
+    appId: '1:YOUR_PROJECT_NUMBER:ios:YOUR_APP_HASH',
+    messagingSenderId: 'YOUR_SENDER_ID_FROM_FIREBASE_CONSOLE',
+    projectId: 'your-aasha-medix-firebase-project',
+    storageBucket: 'your-aasha-medix-firebase-project.appspot.com',
+    iosBundleId: 'com.aashamedix.app',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'your-api-key',
-    appId: 'your-app-id',
-    messagingSenderId: 'your-sender-id',
-    projectId: 'your-project-id',
-    storageBucket: 'your-storage-bucket',
-    authDomain: 'your-project.firebaseapp.com',
+    // NOTE: Replace with your Firebase Web app credentials
+    // Get from: Firebase Console > Project Settings > Your Web App
+    apiKey: 'AIzaSy_YOUR_ACTUAL_WEB_API_KEY_HERE',
+    appId: '1:YOUR_PROJECT_NUMBER:web:YOUR_APP_HASH',
+    messagingSenderId: 'YOUR_SENDER_ID_FROM_FIREBASE_CONSOLE',
+    projectId: 'your-aasha-medix-firebase-project',
+    storageBucket: 'your-aasha-medix-firebase-project.appspot.com',
+    authDomain: 'your-aasha-medix-firebase-project.firebaseapp.com',
   );
 }

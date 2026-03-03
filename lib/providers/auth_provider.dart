@@ -61,9 +61,13 @@ class AuthProvider with ChangeNotifier {
         smsCode,
       );
       // Create or update patient profile
+      final user = result.user;
+      if (user == null) {
+        throw Exception('Authentication failed: User not created');
+      }
       UserModel patient = UserModel(
-        id: result.user!.uid,
-        phoneNumber: result.user!.phoneNumber ?? '',
+        id: user.uid,
+        phoneNumber: user.phoneNumber ?? '',
         role: 'patient',
         createdAt: DateTime.now(),
       );
@@ -86,8 +90,12 @@ class AuthProvider with ChangeNotifier {
         email,
         password,
       );
+      final user = result.user;
+      if (user == null) {
+        throw Exception('Authentication failed: User not created');
+      }
       // Check if staff
-      UserModel? profile = await _authService.getUserProfile(result.user!.uid);
+      UserModel? profile = await _authService.getUserProfile(user.uid);
       if (profile == null || profile.role != 'staff') {
         await _authService.signOut();
         throw Exception('Unauthorized access. Staff credentials required.');

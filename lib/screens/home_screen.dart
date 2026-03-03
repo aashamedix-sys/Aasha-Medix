@@ -42,36 +42,8 @@ class HomeScreen extends StatelessWidget {
       return;
     }
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            '$feature - Coming Soon',
-            style: const TextStyle(
-              color: Color(0xFF2E7D32),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            '$feature feature will be available soon!',
-            style: const TextStyle(height: 1.5),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF2E7D32),
-              ),
-              child: const Text('Okay'),
-            ),
-          ],
-        );
-      },
-    );
+    // Disabled: no blocking "Coming Soon" dialogs in production paths.
+    return;
   }
 
   void _handleServiceTap(BuildContext context, String service) {
@@ -126,30 +98,23 @@ class HomeScreen extends StatelessWidget {
           children: [
             const AppLogo(size: 32),
             const SizedBox(width: 12),
-            Text(
-              l10n.appName,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-                fontSize: 22,
-                letterSpacing: 0.5,
+            Expanded(
+              child: Text(
+                l10n.appName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                  fontSize: 22,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_outlined,
-              color: Color(0xFF2E7D32),
-            ),
-            onPressed: () => _showComingSoonDialog(context, 'Notifications'),
-          ),
           const LanguageSelectorButton(),
-          IconButton(
-            icon: const Icon(Icons.person_outline, color: Color(0xFF2E7D32)),
-            onPressed: () => _showComingSoonDialog(context, 'Profile'),
-          ),
           IconButton(
             icon: const Icon(
               Icons.admin_panel_settings_outlined,
@@ -346,7 +311,7 @@ class ServicesSection extends StatelessWidget {
                   ServiceCard(
                     icon: Icons.local_shipping,
                     title: 'Ambulance Services',
-                    subtitle: 'Coming Soon',
+                    subtitle: 'Unavailable',
                     color: Colors.grey,
                     onTap: null, // Disabled
                   ),
@@ -389,7 +354,8 @@ class QuickActionsSection extends StatelessWidget {
           const SizedBox(height: 8),
           QuickActionButton(
             icon: Icons.smart_toy,
-            text: 'Ask AASHA DOST',
+            text: 'AASHA DOST',
+            textColor: const Color(0xFFE30011),
             onTap: () => onFeatureTap(context, 'AASHA DOST'),
           ),
           const SizedBox(height: 8),
@@ -412,17 +378,32 @@ class QuickActionsSection extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _TrustSignalItem(
-                      icon: Icons.verified,
-                      text: 'Certified Labs',
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: _TrustSignalItem(
+                          icon: Icons.verified,
+                          text: 'Certified Labs',
+                        ),
+                      ),
                     ),
-                    _TrustSignalItem(
-                      icon: Icons.security,
-                      text: 'Fast & Secure',
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: _TrustSignalItem(
+                          icon: Icons.security,
+                          text: 'Fast & Secure',
+                        ),
+                      ),
                     ),
-                    _TrustSignalItem(
-                      icon: Icons.location_on,
-                      text: 'Suryapet & Hyderabad',
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: _TrustSignalItem(
+                          icon: Icons.location_on,
+                          text: 'Suryapet & Hyderabad',
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -489,47 +470,8 @@ class _ServiceCardState extends State<ServiceCard> {
     if (widget.onTap != null) {
       widget.onTap!();
     } else {
-      // Show coming soon message for disabled services
-      if (widget.title == 'Ambulance Services') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Ambulance services launching soon in Suryapet 🚑',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            duration: const Duration(seconds: 3),
-            backgroundColor: const Color(0xFF2E7D32),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${widget.title} - Feature coming soon!'),
-            duration: const Duration(seconds: 2),
-            backgroundColor: widget.color,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-          ),
-        );
-      }
+      // Disabled: no "Coming Soon" snackbars/popups in production paths.
+      return;
     }
   }
 
@@ -575,28 +517,7 @@ class _ServiceCardState extends State<ServiceCard> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (isDisabled)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'Coming Soon',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox.shrink(),
-                  SizedBox(height: isDisabled ? 8.0 : 0.0),
+                  const SizedBox.shrink(),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.all(16),
@@ -647,12 +568,14 @@ class _ServiceCardState extends State<ServiceCard> {
 class QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String text;
+  final Color? textColor;
   final VoidCallback onTap;
 
   const QuickActionButton({
     super.key,
     required this.icon,
     required this.text,
+    this.textColor,
     required this.onTap,
   });
 
@@ -676,10 +599,10 @@ class QuickActionButton extends StatelessWidget {
               const SizedBox(width: 16),
               Text(
                 text,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1B5E20),
+                  color: textColor ?? const Color(0xFF1B5E20),
                 ),
               ),
               const Spacer(),

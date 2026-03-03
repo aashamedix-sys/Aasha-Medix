@@ -1,36 +1,91 @@
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
+import 'dart:convert';
+import '../utils/constants.dart';
 
+/// Booking automation service for posting booking data to Google Sheets via webhook
+///
+/// This service is responsible for:
+/// - Converting booking data to Google Sheets format
+/// - Sending HTTP requests to the webhook endpoint
+/// - Handling network errors gracefully
+/// - No UI interaction (silent operation)
 class BookingAutomationService {
-  // LIVE Make.com webhook URL for Google Sheets CRM integration
-  static const String _webhookUrl =
-      'https://hook.eu2.make.com/781nmlxgteqkuh0g1zft2ktrwrddesbc';
+  // Private constructor to prevent instantiation
+  BookingAutomationService._();
 
-  // Timeout duration for HTTP requests (10 seconds as specified)
-  static const Duration _timeout = Duration(seconds: 10);
+  static const Duration _httpTimeout = Duration(seconds: 10);
 
-  /// Sends booking data to Make.com webhook for Google Sheets CRM
-  /// Returns true on success, false on failure
-  static Future<bool> sendBookingToWebhook(Map<String, dynamic> payload) async {
+  /// Send booking data to Google Sheets webhook
+  ///
+  /// Returns true if the request was successful (HTTP 2xx status).
+  /// Returns false if the request failed for any reason.
+  ///
+  /// Does NOT throw exceptions - all errors are logged and suppressed.
+  ///
+  /// Payload format: Map with booking details
+  static Future<bool> sendToGoogleSheets(Map<String, dynamic> payload) async {
     try {
-      final response = await http
-          .post(
-            Uri.parse(_webhookUrl),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode(payload),
-          )
-          .timeout(_timeout);
-
-      // Consider 200-299 as success
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return true;
-      } else {
+      // Validate payload
+      if (payload.isEmpty) {
+        debugPrint('[BookingAutomationService] Empty payload, skipping');
         return false;
       }
+
+      final webhookUrl = AppConstants.googleSheetsWebhookUrl;
+      if (webhookUrl.isEmpty) {
+        debugPrint(
+          '[BookingAutomationService] No webhook URL configured, skipping',
+        );
+        return false;
+      }
+
+      // Convert payload to JSON
+      final jsonPayload = jsonEncode(payload);
+
+      debugPrint(
+        '[BookingAutomationService] Sending booking to: ${webhookUrl.split('?').first}...',
+      );
+
+      // Prepare HTTP request
+      final uri = Uri.parse(webhookUrl);
+
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonPayload,
+          )
+          .timeout(
+            _httpTimeout,
+            onTimeout: () {
+              throw TimeoutException(
+                'HTTP request timeout after ${_httpTimeout.inSeconds}s',
+              );
+            },
+          );
+
+      // Check response status
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint(
+          '[BookingAutomationService] ✓ Success (HTTP ${response.statusCode})',
+        );
+        return true;
+      } else {
+        debugPrint(
+          '[BookingAutomationService] ✗ HTTP ${response.statusCode}: ${response.body}',
+        );
+        return false;
+      }
+    } on TimeoutException catch (e) {
+      debugPrint('[BookingAutomationService] Timeout: $e');
+      return false;
+    } on http.ClientException catch (e) {
+      debugPrint('[BookingAutomationService] Network error: $e');
+      return false;
     } catch (e) {
+      debugPrint('[BookingAutomationService] Unexpected error: $e');
       return false;
     }
   }
@@ -40,29 +95,6 @@ class BookingAutomationService {
     try {
       final uri = Uri.parse(url);
       return uri.scheme == 'https' && uri.host.isNotEmpty;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Test webhook connectivity (optional utility method)
-  static Future<bool> testWebhook() async {
-    try {
-      final testPayload = {
-        'test': true,
-        'timestamp': DateTime.now().toIso8601String(),
-        'source': 'AASHA_MEDIX_APP_TEST',
-      };
-
-      final response = await http
-          .post(
-            Uri.parse(_webhookUrl),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(testPayload),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      return response.statusCode >= 200 && response.statusCode < 300;
     } catch (e) {
       return false;
     }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/diagnostics_models.dart';
 import '../data/diagnostics_data.dart';
-import '../models/booking_summary_model.dart';
+import '../models/booking_model.dart';
 import 'booking_summary_screen.dart';
 
 class DiagnosticsScreen extends StatefulWidget {
@@ -20,6 +20,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen>
   List<HealthPackage> _allPackages = [];
   List<TestItem> _filteredTests = [];
   List<HealthPackage> _filteredPackages = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -29,10 +30,13 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen>
   }
 
   void _loadData() {
-    _allTests = DiagnosticsData.getCommonTests();
+    _allTests = DiagnosticsData.getCommonTests()
+        .where((t) => t.isActive)
+        .toList();
     _allPackages = DiagnosticsData.getHealthPackages();
     _filteredTests = _allTests;
     _filteredPackages = _allPackages;
+    setState(() => _isLoading = false);
   }
 
   void _filterTests(String query) {
@@ -71,63 +75,67 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen>
     }
   }
 
-  void _bookTest(TestItem test) {
+  Future<void> _bookTest(TestItem test) async {
     // Collect booking date and time
-    showDatePicker(
+    final pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 30)),
-    ).then((pickedDate) {
-      if (pickedDate == null) return;
-      showTimePicker(
-        context: context,
-        initialTime: const TimeOfDay(hour: 10, minute: 0),
-      ).then((pickedTime) {
-        if (pickedTime == null) return;
-        final String formattedTime = pickedTime.format(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookingSummaryScreen(
-              serviceType: ServiceType.diagnostics,
-              testOrPackage: test.testName,
-              bookingDate: pickedDate,
-              bookingTime: formattedTime,
-            ),
-          ),
-        );
-      });
-    });
+    );
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 10, minute: 0),
+    );
+    if (pickedTime == null || !mounted) return;
+
+    final formattedTime = pickedTime.format(context);
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookingSummaryScreen(
+          serviceType: ServiceType.diagnostics,
+          testOrPackage: test.testName,
+          bookingDate: pickedDate,
+          bookingTime: formattedTime,
+        ),
+      ),
+    );
   }
 
-  void _bookPackage(HealthPackage package) {
-    showDatePicker(
+  Future<void> _bookPackage(HealthPackage package) async {
+    final pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 30)),
-    ).then((pickedDate) {
-      if (pickedDate == null) return;
-      showTimePicker(
-        context: context,
-        initialTime: const TimeOfDay(hour: 10, minute: 0),
-      ).then((pickedTime) {
-        if (pickedTime == null) return;
-        final String formattedTime = pickedTime.format(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookingSummaryScreen(
-              serviceType: ServiceType.diagnostics,
-              testOrPackage: package.packageName,
-              bookingDate: pickedDate,
-              bookingTime: formattedTime,
-            ),
-          ),
-        );
-      });
-    });
+    );
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 10, minute: 0),
+    );
+    if (pickedTime == null || !mounted) return;
+
+    final formattedTime = pickedTime.format(context);
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookingSummaryScreen(
+          serviceType: ServiceType.diagnostics,
+          testOrPackage: package.packageName,
+          bookingDate: pickedDate,
+          bookingTime: formattedTime,
+        ),
+      ),
+    );
   }
 
   @override
@@ -173,10 +181,12 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen>
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [_buildTestsTab(), _buildPackagesTab()],
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : TabBarView(
+                    controller: _tabController,
+                    children: [_buildTestsTab(), _buildPackagesTab()],
+                  ),
           ),
         ],
       ),
@@ -184,6 +194,18 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen>
   }
 
   Widget _buildTestsTab() {
+    if (_filteredTests.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'No active tests available right now. Please check back later.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _filteredTests.length,
@@ -244,7 +266,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen>
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            test.description,
+                            test.description.isNotEmpty
+                                ? test.description
+                                : 'Details available at center',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey.shade700,

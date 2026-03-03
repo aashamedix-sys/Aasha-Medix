@@ -42,7 +42,6 @@ dependencies:
 
   # UI Components
   google_fonts: ^6.1.0
-  flutter_svg: ^2.0.9
   cached_network_image: ^3.3.1
 
   # Payment
@@ -56,10 +55,13 @@ dependencies:
   # Networking
   http: ^1.2.0
   dio: ^5.4.0
+  connectivity_plus: ^5.0.1  # Monitor network connectivity for offline detection
 
   # Local Storage
   shared_preferences: ^2.2.2
   path_provider: ^2.1.3
+  sqflite: ^2.3.0  # SQLite for offline queue persistence
+  path: ^1.8.3  # Path utilities for database
 
   # Notifications
   firebase_messaging: ^14.7.10

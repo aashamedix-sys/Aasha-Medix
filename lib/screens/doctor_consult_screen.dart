@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/booking_summary_model.dart';
-import 'booking_summary_screen.dart';
+import 'doctor_appointment_screen.dart';
 
 class DoctorConsultScreen extends StatefulWidget {
   const DoctorConsultScreen({super.key});
@@ -76,31 +75,12 @@ class _DoctorConsultScreenState extends State<DoctorConsultScreen> {
       return;
     }
 
-    // Find the selected consultation details
-    final selectedConsultation = _consultationTypes.firstWhere(
-      (consultation) => consultation['type'] == _selectedConsultationType,
-    );
-
-    // Extract fee and convert to double
-    final feeString = selectedConsultation['fee'] as String;
-    final amount = double.parse(feeString.replaceAll('₹', ''));
-
-    // Create booking summary
-    final booking = BookingSummaryModel(
-      bookingId: BookingSummaryModel.generateBookingId(),
-      serviceType: ServiceType.doctorConsultation,
-      patientName: 'Demo Patient', // Would come from user profile
-      phoneNumber: '+91-9876543210', // Would come from user profile
-      items: [_selectedConsultationType!],
-      amount: amount,
-      createdAt: DateTime.now(),
-    );
-
-    // Navigate to booking summary
+    // Navigate to real appointment scheduling flow (no legacy screens).
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => BookingSummaryScreen(booking: booking),
+        builder: (context) =>
+            DoctorAppointmentScreen(specialty: _selectedConsultationType!),
       ),
     ).then((_) {
       // Clear selection after returning from summary screen

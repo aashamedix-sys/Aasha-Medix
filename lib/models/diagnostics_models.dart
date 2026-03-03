@@ -7,6 +7,7 @@ class TestItem {
   final double price;
   final String description;
   final bool isPopular;
+  final bool isActive;
 
   const TestItem({
     required this.testId,
@@ -17,6 +18,7 @@ class TestItem {
     required this.price,
     required this.description,
     this.isPopular = false,
+    this.isActive = true,
   });
 
   factory TestItem.fromMap(Map<String, dynamic> map) {
@@ -29,6 +31,7 @@ class TestItem {
       price: (map['price'] ?? 0.0).toDouble(),
       description: map['description'] ?? '',
       isPopular: map['isPopular'] ?? false,
+      isActive: map['isActive'] ?? true,
     );
   }
 
@@ -42,6 +45,7 @@ class TestItem {
       'price': price,
       'description': description,
       'isPopular': isPopular,
+      'isActive': isActive,
     };
   }
 }

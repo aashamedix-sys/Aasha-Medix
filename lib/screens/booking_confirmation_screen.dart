@@ -1,302 +1,155 @@
 import 'package:flutter/material.dart';
-import '../models/test_model.dart';
+import '../models/booking_model.dart';
 import '../utils/colors.dart';
-import '../utils/helpers.dart';
 
-class BookingConfirmationScreen extends StatefulWidget {
-  final TestModel test;
+class BookingConfirmationScreen extends StatelessWidget {
+  final BookingModel booking;
 
-  const BookingConfirmationScreen({super.key, required this.test});
-
-  @override
-  State<BookingConfirmationScreen> createState() =>
-      _BookingConfirmationScreenState();
-}
-
-class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
-  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
-  String _selectedTimeSlot = '10:00 AM';
-  String _selectedAddress = 'Home Collection';
-  final List<String> _timeSlots = [
-    '6:00 AM',
-    '7:00 AM',
-    '8:00 AM',
-    '9:00 AM',
-    '10:00 AM',
-    '11:00 AM',
-    '12:00 PM',
-    '1:00 PM',
-    '2:00 PM',
-    '3:00 PM',
-    '4:00 PM',
-    '5:00 PM',
-    '6:00 PM',
-    '7:00 PM',
-    '8:00 PM',
-  ];
-
-  final List<String> _addresses = [
-    'Home Collection',
-    'Lab Visit - Main Branch',
-    'Lab Visit - Branch 1',
-    'Lab Visit - Branch 2',
-  ];
+  const BookingConfirmationScreen({super.key, required this.booking});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Book Test'),
+        title: const Text('Booking Confirmed'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Test Details Card
+            // Success Banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                border: Border.all(color: const Color(0xFF2E7D32)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    color: Color(0xFF2E7D32),
+                    size: 48,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Booking Confirmed!',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1B5E20),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Your booking has been successfully created.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Booking Details Card
             Card(
-              elevation: 4,
+              elevation: 2,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.test.name,
-                      style: const TextStyle(
-                        fontSize: 20,
+                    const Text(
+                      'Booking Details',
+                      style: TextStyle(
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.test.description,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
+                        color: Color(0xFF1B5E20),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Price: ${Helpers.formatCurrency(widget.test.price)}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            Text(
-                              'Duration: ${widget.test.timeRequired} minutes',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            widget.test.category,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                    _buildDetailRow('Booking ID', booking.bookingId),
+                    const Divider(height: 16),
+                    _buildDetailRow(
+                      'Service Type',
+                      _formatServiceType(booking.serviceType),
+                    ),
+                    const Divider(height: 16),
+                    _buildDetailRow('Test/Package', booking.testOrPackage),
+                    const Divider(height: 16),
+                    _buildDetailRow(
+                      'Booking Date',
+                      _formatDate(booking.bookingDate),
+                    ),
+                    const Divider(height: 16),
+                    _buildDetailRow('Booking Time', booking.bookingTime),
+                    const Divider(height: 16),
+                    _buildDetailRow(
+                      'Booking Status',
+                      _formatStatus(booking.bookingStatus),
+                    ),
+                    const Divider(height: 16),
+                    _buildDetailRow(
+                      'Payment Status',
+                      _formatPaymentStatus(booking.paymentStatus),
+                    ),
+                    const Divider(height: 16),
+                    _buildDetailRow(
+                      'Created At',
+                      _formatDateTime(booking.createdAt),
                     ),
                   ],
                 ),
               ),
             ),
-
             const SizedBox(height: 24),
 
-            // Date Selection
-            const Text(
-              'Select Date',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+            // Info Box
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
               ),
-            ),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: _selectDate,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today, color: AppColors.primary),
-                    const SizedBox(width: 12),
-                    Text(
-                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.arrow_drop_down),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Time Slot Selection
-            const Text(
-              'Select Time Slot',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _timeSlots.map((slot) {
-                final isSelected = slot == _selectedTimeSlot;
-                return ChoiceChip(
-                  label: Text(slot),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        _selectedTimeSlot = slot;
-                      });
-                    }
-                  },
-                  selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                  backgroundColor: Colors.grey[100],
-                  labelStyle: TextStyle(
-                    color: isSelected
-                        ? AppColors.primary
-                        : AppColors.textPrimary,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                  ),
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Collection Type
-            const Text(
-              'Collection Type',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _addresses.map((address) {
-                final isSelected = address == _selectedAddress;
-                return ChoiceChip(
-                  label: Text(address),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        _selectedAddress = address;
-                      });
-                    }
-                  },
-                  selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                  backgroundColor: Colors.grey[100],
-                  labelStyle: TextStyle(
-                    color: isSelected
-                        ? AppColors.primary
-                        : AppColors.textPrimary,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                  ),
-                  checkmarkColor: AppColors.primary,
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Preparation Instructions
-            if (widget.test.preparation != null &&
-                widget.test.preparation!.isNotEmpty) ...[
-              const Text(
-                'Preparation Instructions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning, color: Colors.orange),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        widget.test.preparation ??
-                            'No specific preparation required',
-                        style: const TextStyle(
-                          color: Color(0xFFEF6C00),
-                          fontSize: 14,
-                        ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'You can view and manage your bookings in the Reports section.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.blue,
+                        height: 1.4,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-            ],
+            ),
+            const SizedBox(height: 32),
 
-            // Book Now Button
+            // Action Buttons
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _confirmBooking,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: const Color(0xFF2E7D32),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -304,8 +157,8 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   ),
                 ),
                 child: const Text(
-                  'Confirm Booking',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  'Back to Home',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -315,54 +168,71 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
-  Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
+  static Widget _buildDetailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B5E20),
+            ),
+          ),
+        ),
+      ],
     );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
+  }
+
+  static String _formatServiceType(ServiceType type) {
+    switch (type) {
+      case ServiceType.diagnostics:
+        return 'Diagnostics';
+      case ServiceType.doctor:
+        return 'Doctor Consultation';
+      case ServiceType.homeSample:
+        return 'Home Sample Collection';
     }
   }
 
-  void _confirmBooking() {
-    // Show confirmation dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Booking Confirmed!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Test: ${widget.test.name}'),
-            Text(
-              'Date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-            ),
-            Text('Time: $_selectedTimeSlot'),
-            Text('Location: $_selectedAddress'),
-            Text('Amount: ${Helpers.formatCurrency(widget.test.price)}'),
-            const SizedBox(height: 16),
-            const Text(
-              'You will receive a confirmation SMS and email shortly.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Go back to services
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  static String _formatStatus(BookingStatus status) {
+    switch (status) {
+      case BookingStatus.booked:
+        return 'Booked';
+      case BookingStatus.collected:
+        return 'Collected';
+      case BookingStatus.completed:
+        return 'Completed';
+      case BookingStatus.cancelled:
+        return 'Cancelled';
+    }
+  }
+
+  static String _formatPaymentStatus(PaymentStatus status) {
+    switch (status) {
+      case PaymentStatus.pending:
+        return 'Pending';
+      case PaymentStatus.paid:
+        return 'Paid';
+    }
+  }
+
+  static String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  static String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }
