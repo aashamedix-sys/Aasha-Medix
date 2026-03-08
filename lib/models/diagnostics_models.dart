@@ -23,29 +23,29 @@ class TestItem {
 
   factory TestItem.fromMap(Map<String, dynamic> map) {
     return TestItem(
-      testId: map['testId'] ?? '',
-      testName: map['testName'] ?? '',
+      testId: map['test_id'] ?? map['id'] ?? '',
+      testName: map['test_name'] ?? '',
       category: map['category'] ?? '',
-      sampleType: map['sampleType'] ?? '',
-      reportingTime: map['reportingTime'] ?? '',
+      sampleType: map['sample_type'] ?? '',
+      reportingTime: map['reporting_time'] ?? '',
       price: (map['price'] ?? 0.0).toDouble(),
       description: map['description'] ?? '',
-      isPopular: map['isPopular'] ?? false,
-      isActive: map['isActive'] ?? true,
+      isPopular: map['is_popular'] ?? false,
+      isActive: map['is_active'] ?? true,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'testId': testId,
-      'testName': testName,
+      'test_id': testId,
+      'test_name': testName,
       'category': category,
-      'sampleType': sampleType,
-      'reportingTime': reportingTime,
+      'sample_type': sampleType,
+      'reporting_time': reportingTime,
       'price': price,
       'description': description,
-      'isPopular': isPopular,
-      'isActive': isActive,
+      'is_popular': isPopular,
+      'is_active': isActive,
     };
   }
 }
@@ -71,22 +71,22 @@ class HealthPackage {
 
   factory HealthPackage.fromMap(Map<String, dynamic> map) {
     return HealthPackage(
-      packageId: map['packageId'] ?? '',
-      packageName: map['packageName'] ?? '',
-      includedTests: List<String>.from(map['includedTests'] ?? []),
-      originalPrice: (map['originalPrice'] ?? 0.0).toDouble(),
-      discountedPrice: (map['discountedPrice'] ?? 0.0).toDouble(),
+      packageId: map['package_id'] ?? map['id'] ?? '',
+      packageName: map['package_name'] ?? '',
+      includedTests: List<String>.from(map['included_tests'] ?? []),
+      originalPrice: (map['original_price'] ?? 0.0).toDouble(),
+      discountedPrice: (map['discounted_price'] ?? 0.0).toDouble(),
       description: map['description'] ?? '',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'packageId': packageId,
-      'packageName': packageName,
-      'includedTests': includedTests,
-      'originalPrice': originalPrice,
-      'discountedPrice': discountedPrice,
+      'package_id': packageId,
+      'package_name': packageName,
+      'included_tests': includedTests,
+      'original_price': originalPrice,
+      'discounted_price': discountedPrice,
       'description': description,
     };
   }

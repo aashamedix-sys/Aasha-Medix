@@ -12,7 +12,7 @@ class DiagnosticsService {
   Future<List<TestItem>> fetchTests() async {
     try {
       final response = await _client
-          .from('diagnostic_tests')
+          .from('tests')
           .select()
           .order('testName', ascending: true);
 
@@ -21,7 +21,7 @@ class DiagnosticsService {
           .toList();
     } on PostgrestException catch (e) {
       throw Exception(
-          'Supabase query failed [diagnostic_tests]: ${e.message} (code: ${e.code})');
+          'Supabase query failed [tests]: ${e.message} (code: ${e.code})');
     } catch (e) {
       throw Exception('Unexpected error fetching diagnostic tests: $e');
     }
