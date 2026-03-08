@@ -97,6 +97,10 @@ CREATE TABLE IF NOT EXISTS doctors (
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure the column exists if the table was created in an earlier migration (e.g. as is_available)
+ALTER TABLE doctors ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+
+
 CREATE TABLE IF NOT EXISTS nursing_requests (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id        UUID REFERENCES bookings(id) ON DELETE CASCADE,
