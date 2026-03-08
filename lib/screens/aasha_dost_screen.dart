@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../core/env_config.dart';
 import '../core/utils/colors.dart';
 
 // ============================================================
@@ -82,33 +85,40 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
     });
   }
 
-  /// Stub — to be replaced with real Supabase Edge Function call.
+  /// Calls the Supabase Edge Function `aasha-dost-ai`.
   ///
-  /// Implementation target:
-  ///   POST https://<supabase-url>/functions/v1/aasha-dost-ai
-  ///   Headers: Authorization: Bearer <anon-key>
-  ///   Body: { "message": userMessage }
-  ///
-  /// Expected response: { "reply": "AI response text" }
+  /// Phase 3: The function currently returns a placeholder response.
+  /// Phase 5: Wire in OpenAI / Gemini inside the Edge Function and
+  ///          remove the placeholder banner from the UI.
   Future<String> _fetchAIResponse(String userMessage) async {
-    // TODO(Phase 5): Replace with real Edge Function HTTP call.
-    // Example:
-    // final response = await http.post(
-    //   Uri.parse('${EnvConfig.supabaseUrl}/functions/v1/aasha-dost-ai'),
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': 'Bearer ${EnvConfig.supabaseAnonKey}',
-    //   },
-    //   body: jsonEncode({'message': userMessage}),
-    // );
-    // if (response.statusCode != 200) throw Exception('AI API error: ${response.statusCode}');
-    // return jsonDecode(response.body)['reply'] as String;
+    try {
+      final uri = Uri.parse(EnvConfig.aashaDostAiUrl);
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${EnvConfig.supabaseAnonKey}',
+          'apikey': EnvConfig.supabaseAnonKey,
+        },
+        body: jsonEncode({'message': userMessage}),
+      ).timeout(const Duration(seconds: 15));
 
-    // Until Phase 5 is implemented, throw a clear error so it is never
-    // confused with working AI functionality.
-    throw UnimplementedError(
-        'AASHA DOST AI backend is not yet implemented. '
-        'See Phase 5 of the AASHA MEDIX backend integration plan.');
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Edge Function returned HTTP ${response.statusCode}: ${response.body}');
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final reply = data['reply'] as String?;
+      if (reply == null || reply.isEmpty) {
+        throw Exception('Edge Function returned an empty reply field.');
+      }
+      return reply;
+    } on http.ClientException catch (e) {
+      throw Exception('Network error calling AI backend: ${e.message}');
+    } catch (e) {
+      rethrow;
+    }
   }
 
   void _scrollToBottom() {
