@@ -10,6 +10,8 @@ class BookingSummaryScreen extends StatefulWidget {
   final String? testOrPackage;
   final DateTime? bookingDate;
   final String? bookingTime;
+  final String? address;
+  final double? totalAmount;
 
   // Legacy constructor parameter (for other screens not yet refactored)
   final dynamic booking;
@@ -21,6 +23,8 @@ class BookingSummaryScreen extends StatefulWidget {
     this.testOrPackage,
     this.bookingDate,
     this.bookingTime,
+    this.address,
+    this.totalAmount,
     // Legacy parameter
     this.booking,
   }) : assert(
@@ -79,6 +83,8 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
         testOrPackage: widget.testOrPackage!,
         bookingDate: widget.bookingDate!,
         bookingTime: widget.bookingTime!,
+        address: widget.address,
+        totalAmount: widget.totalAmount,
       );
       final booking = bookingProvider.latestBooking;
       if (booking != null && mounted) {
@@ -152,6 +158,14 @@ class _BookingSummaryScreenState extends State<BookingSummaryScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildDetailRow('Booking Time', widget.bookingTime!),
+                    if (widget.address != null) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow('Address', widget.address!),
+                    ],
+                    if (widget.totalAmount != null && widget.totalAmount! > 0) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow('Amount', '₹${widget.totalAmount!.toStringAsFixed(0)}'),
+                    ],
                   ],
                 ),
               ),

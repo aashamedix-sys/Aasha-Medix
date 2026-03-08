@@ -1,100 +1,128 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // To get current user id
 import '../models/booking_model.dart';
-import '../services/backend_sync_service.dart';
+import '../services/booking_service.dart';
+import '../services/audit_service.dart';
+import '../utils/app_error.dart';
 
 class BookingProvider with ChangeNotifier {
+  final BookingService _service = BookingService();
+  final AuditService _auditService = AuditService();
   BookingModel? _latestBooking;
+  List<BookingModel> _myBookings = [];
+  bool _isLoading = false;
 
-  // Getter for the latest booking
   BookingModel? get latestBooking => _latestBooking;
-
-  // Check if there's an active booking
+  List<BookingModel> get myBookings => _myBookings;
   bool get hasActiveBooking => _latestBooking != null;
+  bool get isLoading => _isLoading;
 
-  // Create a new booking for authenticated user
   Future<void> createBooking({
     required ServiceType serviceType,
     required String testOrPackage,
     required DateTime bookingDate,
     required String bookingTime,
     String? userPhone,
+    String? address,
+    String? notes,
+    double? totalAmount,
   }) async {
-    // Get current authenticated user
-    final User? currentUser = FirebaseAuth.instance.currentUser;
+    final User? currentUser = Supabase.instance.client.auth.currentUser;
 
-    // Throw controlled exception if user is not authenticated
     if (currentUser == null) {
-      throw Exception(
-        'User not authenticated. Please login to create a booking.',
-      );
+      throw Exception('User not authenticated. Please login to create a booking.');
     }
 
-    // Generate unique booking ID using timestamp and random suffix
-    final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    final String randomSuffix = (DateTime.now().microsecondsSinceEpoch % 1000)
-        .toString()
-        .padLeft(3, '0');
-    final String bookingId = 'BK$timestamp$randomSuffix';
-
-    // Create the booking model
-    final BookingModel newBooking = BookingModel(
-      bookingId: bookingId,
-      userId: currentUser.uid,
-      userPhone: userPhone ?? currentUser.phoneNumber,
-      serviceType: serviceType,
-      testOrPackage: testOrPackage,
-      bookingDate: bookingDate,
-      bookingTime: bookingTime,
-      bookingStatus: BookingStatus.booked,
-      paymentStatus: PaymentStatus.pending,
-      createdAt: DateTime.now(),
-    );
-
-    // Store the booking locally
-    _latestBooking = newBooking;
-
-    // Trigger backend sync (fire and forget - no await, no block)
-    // This will queue the booking for sync to Google Sheets with retry logic
-    try {
-      BackendSyncService().enqueueBooking(newBooking);
-    } catch (e) {
-      debugPrint('[BookingProvider] Background sync error (non-blocking): $e');
-    }
-
-    // Notify listeners about the new booking
+    _isLoading = true;
     notifyListeners();
+
+    try {
+      // Create temporary booking object to send to backend
+      // Note: Backend might override the ID we send or we generate UUID here if DB expects it.
+      // Usually, Postgres UUIDs are generated on the server using uuid_generate_v4() defaults.
+      // But Since our model requires an ID, we'll send a temporary ID or just omit it in JSON dynamically.
+
+      final String tempId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      final BookingModel newBooking = BookingModel(
+        bookingId: tempId, // Might be ignored by Supabase if it's default uuid on insert
+        userId: currentUser.id,
+        userPhone: userPhone ?? currentUser.phone,
+        serviceType: serviceType,
+        testOrPackage: testOrPackage,
+        bookingDate: bookingDate,
+        bookingTime: bookingTime,
+        bookingStatus: BookingStatus.booked,
+        paymentStatus: PaymentStatus.pending,
+        address: address,
+        notes: notes,
+        totalAmount: totalAmount,
+        createdAt: DateTime.now(),
+      );
+
+      final realId = await _service.createBooking(newBooking);
+
+      // Update with the real ID
+      _latestBooking = BookingModel(
+        bookingId: realId,
+        userId: currentUser.id,
+        userPhone: userPhone ?? currentUser.phone,
+        serviceType: serviceType,
+        testOrPackage: testOrPackage,
+        bookingDate: bookingDate,
+        bookingTime: bookingTime,
+        bookingStatus: BookingStatus.booked,
+        paymentStatus: PaymentStatus.pending,
+        address: address,
+        notes: notes,
+        totalAmount: totalAmount,
+        createdAt: newBooking.createdAt,
+      );
+
+      _myBookings.insert(0, _latestBooking!);
+
+      await _auditService.logAction(
+        action: 'BOOKING_CREATED',
+        details: 'Booking ID: $realId, Service: ${serviceType.name}'
+      );
+
+      _isLoading = false;
+      notifyListeners();
+
+    } catch(e) {
+      _isLoading = false;
+      notifyListeners();
+      throw AppError.from(e);
+    }
   }
 
-  // Get booking data as map (ready for automation/webhooks)
+  Future<void> fetchMyBookings() async {
+    final User? currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser == null) return;
+    
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      _myBookings = await _service.fetchUserBookings(currentUser.id);
+      if (_myBookings.isNotEmpty) {
+        _latestBooking = _myBookings.first;
+      }
+      _isLoading = false;
+      notifyListeners();
+    } catch(e) {
+      _isLoading = false;
+      notifyListeners();
+      throw AppError.from(e);
+    }
+  }
+
   Map<String, dynamic>? get bookingToMap {
     return _latestBooking?.toMap();
   }
 
-  // Clear the current booking (useful for logout or reset)
   void clearBooking() {
     _latestBooking = null;
     notifyListeners();
-  }
-
-  // Update booking status (for future use when connecting to backend)
-  void updateBookingStatus(BookingStatus newStatus) {
-    if (_latestBooking != null) {
-      // Note: Since BookingModel is immutable, we'd need to create a new instance
-      // This is prepared for when we add backend integration
-      _latestBooking = BookingModel(
-        bookingId: _latestBooking!.bookingId,
-        userId: _latestBooking!.userId,
-        userPhone: _latestBooking!.userPhone,
-        serviceType: _latestBooking!.serviceType,
-        testOrPackage: _latestBooking!.testOrPackage,
-        bookingDate: _latestBooking!.bookingDate,
-        bookingTime: _latestBooking!.bookingTime,
-        bookingStatus: newStatus,
-        paymentStatus: _latestBooking!.paymentStatus,
-        createdAt: _latestBooking!.createdAt,
-      );
-      notifyListeners();
-    }
   }
 }

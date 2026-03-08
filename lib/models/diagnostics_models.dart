@@ -27,11 +27,11 @@ class TestItem {
       testName: map['test_name'] ?? '',
       category: map['category'] ?? '',
       sampleType: map['sample_type'] ?? '',
-      reportingTime: map['reporting_time'] ?? '',
+      reportingTime: map['tat'] ?? '',
       price: (map['price'] ?? 0.0).toDouble(),
       description: map['description'] ?? '',
       isPopular: map['is_popular'] ?? false,
-      isActive: map['is_active'] ?? true,
+      isActive: map['status'] == 'active',
     );
   }
 
@@ -41,11 +41,11 @@ class TestItem {
       'test_name': testName,
       'category': category,
       'sample_type': sampleType,
-      'reporting_time': reportingTime,
+      'tat': reportingTime,
       'price': price,
       'description': description,
       'is_popular': isPopular,
-      'is_active': isActive,
+      'status': isActive ? 'active' : 'inactive',
     };
   }
 }

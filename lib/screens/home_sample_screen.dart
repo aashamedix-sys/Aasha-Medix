@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/booking_summary_model.dart';
 import 'booking_summary_screen.dart';
+import '../models/booking_model.dart';
 
 class HomeSampleScreen extends StatefulWidget {
   const HomeSampleScreen({super.key});
@@ -63,25 +63,20 @@ class _HomeSampleScreenState extends State<HomeSampleScreen> {
         return;
       }
 
-      // Create booking summary
-      final booking = BookingSummaryModel(
-        bookingId: BookingSummaryModel.generateBookingId(),
-        serviceType: ServiceType.homeSample,
-        patientName: _nameController.text,
-        phoneNumber: _mobileController.text,
-        items: ['Home Sample Collection'],
-        address: _addressController.text,
-        date: _selectedDate,
-        time: _selectedTime,
-        amount: 200.0, // Demo fee for home sample collection
-        createdAt: DateTime.now(),
-      );
+      final formattedTime = _selectedTime!.format(context);
 
       // Navigate to booking summary
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => BookingSummaryScreen(booking: booking),
+          builder: (context) => BookingSummaryScreen(
+            serviceType: ServiceType.homeSample,
+            testOrPackage: 'Home Sample Collection',
+            bookingDate: _selectedDate,
+            bookingTime: formattedTime,
+            address: _addressController.text,
+            totalAmount: 200.0,
+          ),
         ),
       ).then((_) {
         // Clear form after returning from summary screen

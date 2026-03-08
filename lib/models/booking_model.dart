@@ -1,10 +1,9 @@
-enum ServiceType { diagnostics, doctor, homeSample }
-
-enum BookingStatus { booked, collected, completed, cancelled }
-
-enum PaymentStatus { pending, paid }
+enum ServiceType { diagnostics, doctor, homeSample, nursing, pharmacy }
+enum BookingStatus { pending, booked, scheduled, assigned, inProgress, completed, cancelled }
+enum PaymentStatus { pending, paid, failed, refunded }
 
 class BookingModel {
+  // UI-compatible property names
   final String bookingId;
   final String userId;
   final String? userPhone;
@@ -15,8 +14,17 @@ class BookingModel {
   final BookingStatus bookingStatus;
   final PaymentStatus paymentStatus;
   final DateTime createdAt;
+  final double? totalAmount;
+  final String? notes;
+  final String? address;
 
-  const BookingModel({
+  // Milestone Timestamps
+  final DateTime? assignedAt;
+  final DateTime? serviceStartedAt;
+  final DateTime? serviceCompletedAt;
+  final DateTime? reportUploadedAt;
+
+  BookingModel({
     required this.bookingId,
     required this.userId,
     this.userPhone,
@@ -24,123 +32,70 @@ class BookingModel {
     required this.testOrPackage,
     required this.bookingDate,
     required this.bookingTime,
-    required this.bookingStatus,
-    required this.paymentStatus,
+    this.bookingStatus = BookingStatus.pending,
+    this.paymentStatus = PaymentStatus.pending,
     required this.createdAt,
+    this.totalAmount,
+    this.notes,
+    this.address,
+    this.assignedAt,
+    this.serviceStartedAt,
+    this.serviceCompletedAt,
+    this.reportUploadedAt,
   });
 
-  // Convert enum to string for Firestore/JSON
-  String get serviceTypeString {
-    switch (serviceType) {
-      case ServiceType.diagnostics:
-        return 'diagnostics';
-      case ServiceType.doctor:
-        return 'doctor';
-      case ServiceType.homeSample:
-        return 'home_sample';
-    }
-  }
-
-  String get bookingStatusString {
-    switch (bookingStatus) {
-      case BookingStatus.booked:
-        return 'booked';
-      case BookingStatus.collected:
-        return 'collected';
-      case BookingStatus.completed:
-        return 'completed';
-      case BookingStatus.cancelled:
-        return 'cancelled';
-    }
-  }
-
-  String get paymentStatusString {
-    switch (paymentStatus) {
-      case PaymentStatus.pending:
-        return 'pending';
-      case PaymentStatus.paid:
-        return 'paid';
-    }
-  }
-
-  // Create from Firestore/JSON map
-  factory BookingModel.fromMap(Map<String, dynamic> map) {
+  // Maps UI names to Supabase DB schema
+  factory BookingModel.fromJson(Map<String, dynamic> json) {
     return BookingModel(
-      bookingId: map['bookingId'] ?? '',
-      userId: map['userId'] ?? '',
-      userPhone: map['userPhone'],
-      serviceType: _parseServiceType(map['serviceType'] ?? ''),
-      testOrPackage: map['testOrPackage'] ?? '',
-      bookingDate: DateTime.parse(
-        map['bookingDate'] ?? DateTime.now().toIso8601String(),
-      ),
-      bookingTime: map['bookingTime'] ?? '',
-      bookingStatus: _parseBookingStatus(map['bookingStatus'] ?? ''),
-      paymentStatus: _parsePaymentStatus(map['paymentStatus'] ?? ''),
-      createdAt: DateTime.parse(
-        map['createdAt'] ?? DateTime.now().toIso8601String(),
-      ),
+      bookingId: json['id'],
+      userId: json['patient_id'],
+      serviceType: ServiceType.values.firstWhere((e) => e.name == json['service_type'], orElse: () => ServiceType.diagnostics),
+      bookingStatus: _parseStatus(json['status']),
+      bookingDate: DateTime.parse(json['scheduled_time']),
+      bookingTime: "TBD", // Derived from scheduled_time
+      totalAmount: json['total_amount'] != null ? (json['total_amount'] as num).toDouble() : 0.0,
+      notes: json['notes'],
+      createdAt: DateTime.parse(json['created_at']),
+      testOrPackage: json['test_or_package'] ?? 'Unknown',
+      userPhone: json['user_phone'],
+      address: json['address'],
+      paymentStatus: PaymentStatus.pending,
+      assignedAt: json['assigned_at'] != null ? DateTime.parse(json['assigned_at']) : null,
+      serviceStartedAt: json['service_started_at'] != null ? DateTime.parse(json['service_started_at']) : null,
+      serviceCompletedAt: json['service_completed_at'] != null ? DateTime.parse(json['service_completed_at']) : null,
+      reportUploadedAt: json['report_uploaded_at'] != null ? DateTime.parse(json['report_uploaded_at']) : null,
     );
   }
 
-  // Convert to Firestore/JSON map
-  Map<String, dynamic> toMap() {
+  factory BookingModel.fromMap(Map<String, dynamic> map) => BookingModel.fromJson(map);
+
+  Map<String, dynamic> toJson() {
     return {
-      'bookingId': bookingId,
-      'userId': userId,
-      'userPhone': userPhone,
-      'serviceType': serviceTypeString,
-      'testOrPackage': testOrPackage,
-      'bookingDate': bookingDate.toIso8601String(),
-      'bookingTime': bookingTime,
-      'bookingStatus': bookingStatusString,
-      'paymentStatus': paymentStatusString,
-      'createdAt': createdAt.toIso8601String(),
+      'id': bookingId,
+      'patient_id': userId,
+      'service_type': serviceType.name,
+      'status': bookingStatus == BookingStatus.inProgress ? 'in_progress' : bookingStatus.name,
+      'scheduled_time': bookingDate.toUtc().toIso8601String(),
+      'total_amount': totalAmount ?? 0.0,
+      'notes': notes,
+      if (address != null) 'address': address,
+      if (userPhone != null) 'user_phone': userPhone,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'assigned_at': assignedAt?.toIso8601String(),
+      'service_started_at': serviceStartedAt?.toIso8601String(),
+      'service_completed_at': serviceCompletedAt?.toIso8601String(),
+      'report_uploaded_at': reportUploadedAt?.toIso8601String(),
     };
   }
 
-  // Helper methods to parse strings back to enums
-  static ServiceType _parseServiceType(String value) {
-    switch (value) {
-      case 'diagnostics':
-        return ServiceType.diagnostics;
-      case 'doctor':
-        return ServiceType.doctor;
-      case 'home_sample':
-        return ServiceType.homeSample;
-      default:
-        return ServiceType.diagnostics; // fallback
-    }
+  static BookingStatus _parseStatus(String? status) {
+    if (status == null) return BookingStatus.pending;
+    if (status == 'in_progress') return BookingStatus.inProgress;
+    return BookingStatus.values.firstWhere(
+      (e) => e.name == status,
+      orElse: () => BookingStatus.pending,
+    );
   }
 
-  static BookingStatus _parseBookingStatus(String value) {
-    switch (value) {
-      case 'booked':
-        return BookingStatus.booked;
-      case 'collected':
-        return BookingStatus.collected;
-      case 'completed':
-        return BookingStatus.completed;
-      case 'cancelled':
-        return BookingStatus.cancelled;
-      default:
-        return BookingStatus.booked; // fallback
-    }
-  }
-
-  static PaymentStatus _parsePaymentStatus(String value) {
-    switch (value) {
-      case 'pending':
-        return PaymentStatus.pending;
-      case 'paid':
-        return PaymentStatus.paid;
-      default:
-        return PaymentStatus.pending; // fallback
-    }
-  }
-
-  @override
-  String toString() {
-    return 'BookingModel(bookingId: $bookingId, userId: $userId, serviceType: $serviceTypeString, testOrPackage: $testOrPackage, status: $bookingStatusString)';
-  }
+  Map<String, dynamic> toMap() => toJson();
 }
