@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../core/env_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/utils/colors.dart';
 
 // ============================================================
@@ -86,38 +84,27 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
   }
 
   /// Calls the Supabase Edge Function `aasha-dost-ai`.
-  ///
-  /// Phase 3: The function currently returns a placeholder response.
-  /// Phase 5: Wire in OpenAI / Gemini inside the Edge Function and
-  ///          remove the placeholder banner from the UI.
   Future<String> _fetchAIResponse(String userMessage) async {
     try {
-      final uri = Uri.parse(EnvConfig.aashaDostAiUrl);
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${EnvConfig.supabaseAnonKey}',
-          'apikey': EnvConfig.supabaseAnonKey,
-        },
-        body: jsonEncode({'message': userMessage}),
-      ).timeout(const Duration(seconds: 15));
+      final response = await Supabase.instance.client.functions.invoke(
+        'aasha-dost-ai',
+        body: {'message': userMessage},
+      );
 
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Edge Function returned HTTP ${response.statusCode}: ${response.body}');
+      final data = response.data as Map<String, dynamic>?;
+      if (data == null) {
+        throw Exception('Received empty data from Edge Function.');
       }
-
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      
       final reply = data['reply'] as String?;
       if (reply == null || reply.isEmpty) {
         throw Exception('Edge Function returned an empty reply field.');
       }
       return reply;
-    } on http.ClientException catch (e) {
-      throw Exception('Network error calling AI backend: ${e.message}');
+    } on FunctionException catch (e) {
+      throw Exception('Edge Function Error: $e');
     } catch (e) {
-      rethrow;
+      throw Exception('Network error calling AI backend: $e');
     }
   }
 
@@ -155,7 +142,7 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  'AI Health Assistant — Backend Integration Pending',
+                  'AI Health Assistant',
                   style: TextStyle(fontSize: 11, color: Colors.white70),
                 ),
               ],
@@ -168,28 +155,6 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
       ),
       body: Column(
         children: [
-          // Backend pending banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.amber.shade100,
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: Colors.amber, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'AI backend (Phase 5) is pending. Responses may show errors until EdgeFunction is deployed.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.amber.shade900,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // Chat messages
           Expanded(
             child: Container(
