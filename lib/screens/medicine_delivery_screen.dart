@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show Uint8List;
+import 'package:provider/provider.dart';
+import '../providers/medicine_provider.dart';
 import '../widgets/prescription_upload_widget.dart';
 import '../widgets/order_status_timeline.dart';
 import '../l10n/app_localizations.dart';
@@ -107,7 +109,7 @@ class _MedicineDeliveryScreenState extends State<MedicineDeliveryScreen> {
     }
   }
 
-  void _placeOrder() {
+  Future<void> _placeOrder() async {
     if (_prescriptionFile == null &&
         _webPrescription == null &&
         _loadedPrescriptionName == null) {
@@ -137,17 +139,28 @@ class _MedicineDeliveryScreenState extends State<MedicineDeliveryScreen> {
       return;
     }
 
-    // Generate order ID
-    final orderId =
-        'MED${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    final provider = context.read<MedicineProvider>();
 
-    setState(() {
-      _isOrderPlaced = true;
-      _orderId = orderId;
-    });
+    try {
+      final orderId = await provider.placeOrder(
+        deliveryAddress: _deliveryAddress,
+        prescriptionImage: _prescriptionFile,
+      );
 
-    // Show success dialog
-    _showOrderSuccessDialog();
+      if (!mounted) return;
+      setState(() {
+        _isOrderPlaced = true;
+        _orderId = orderId;
+      });
+
+      // Show success dialog
+      _showOrderSuccessDialog();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to place order: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   void _showOrderSuccessDialog() {
@@ -189,6 +202,7 @@ class _MedicineDeliveryScreenState extends State<MedicineDeliveryScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isLoading = context.watch<MedicineProvider>().isLoading;
 
     if (_isOrderPlaced && _orderId != null) {
       return OrderTrackingScreen(orderId: _orderId!);
@@ -235,7 +249,7 @@ class _MedicineDeliveryScreenState extends State<MedicineDeliveryScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigation(l10n),
+      bottomNavigationBar: _buildBottomNavigation(l10n, isLoading),
     );
   }
 
@@ -429,7 +443,7 @@ class _MedicineDeliveryScreenState extends State<MedicineDeliveryScreen> {
     );
   }
 
-  Widget _buildBottomNavigation(AppLocalizations l10n) {
+  Widget _buildBottomNavigation(AppLocalizations l10n, bool isLoading) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -458,9 +472,9 @@ class _MedicineDeliveryScreenState extends State<MedicineDeliveryScreen> {
           if (_currentStep > 0) const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentStep == 2
+              onPressed: isLoading ? null : (_currentStep == 2
                   ? _placeOrder
-                  : () => setState(() => _currentStep++),
+                  : () => setState(() => _currentStep++)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2E7D32),
                 padding: const EdgeInsets.symmetric(vertical: 16),

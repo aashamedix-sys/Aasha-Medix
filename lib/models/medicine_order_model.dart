@@ -33,13 +33,13 @@ class MedicineOrderModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      if (id.isNotEmpty) 'id': id,
       'patient_id': patientId,
       'prescription_url': prescriptionUrl,
       'items': items,
       'delivery_address': deliveryAddress,
       'status': status.name,
-      'created_at': createdAt.toIso8601String(),
+      'created_at': createdAt.toUtc().toIso8601String(),
     };
   }
 }

@@ -29,6 +29,18 @@ class MedicineService {
   }
 
   Future<String> createMedicineOrder(MedicineOrderModel order) async {
+    // 1. Create a primary record in bookings architecture
+    final bookingData = {
+      'patient_id': order.patientId,
+      'service_type': 'medicine',
+      'test_or_package': 'Medicine Delivery',
+      'scheduled_time': order.createdAt.toUtc().toIso8601String(),
+      'status': 'pending',
+      'created_at': order.createdAt.toUtc().toIso8601String(),
+    };
+    await _supabase.from('bookings').insert(bookingData);
+
+    // 2. Create the specialized medicine order record
     final response = await _supabase
         .from('medicine_orders')
         .insert(order.toJson())

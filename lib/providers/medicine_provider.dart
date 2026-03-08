@@ -13,7 +13,7 @@ class MedicineProvider with ChangeNotifier {
   List<MedicineOrderModel> get orders => _orders;
   bool get isLoading => _isLoading;
 
-  Future<void> placeOrder({
+  Future<String> placeOrder({
     required String deliveryAddress,
     File? prescriptionImage,
     List<dynamic> items = const [],
@@ -54,6 +54,7 @@ class MedicineProvider with ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
+      return newId;
     } catch(e) {
       _isLoading = false;
       notifyListeners();
