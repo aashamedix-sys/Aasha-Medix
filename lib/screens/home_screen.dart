@@ -4,6 +4,7 @@ import 'aasha_dost_screen.dart';
 import 'diagnostics_screen.dart';
 import 'home_sample_screen.dart';
 import 'doctor_list_screen.dart';
+import 'nursing_request_screen.dart';
 import 'reports_screen.dart';
 import 'medicine_delivery_screen.dart';
 import 'admin_login_screen.dart';
@@ -35,7 +36,7 @@ class HomeScreen extends StatelessWidget {
       case 'Home Nursing':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const HomeSampleScreen()),
+          MaterialPageRoute(builder: (context) => const NursingRequestScreen()),
         );
         break;
       case 'Order Medicines':

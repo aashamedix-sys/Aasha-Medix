@@ -1,16 +1,24 @@
 class NurseModel {
   final String id;
   final String name;
-  final String specialization;
-  final List<String> serviceArea;
-  final bool isAvailable;
+  final String? specialization;
+  final String? qualification;
+  final int experienceYears;
+  final String? phone;
+  final String? email;
+  final String? zoneId;
+  final bool isActive;
 
   NurseModel({
     required this.id,
     required this.name,
-    required this.specialization,
-    required this.serviceArea,
-    required this.isAvailable,
+    this.specialization,
+    this.qualification,
+    this.experienceYears = 0,
+    this.phone,
+    this.email,
+    this.zoneId,
+    this.isActive = true,
   });
 
   factory NurseModel.fromJson(Map<String, dynamic> json) {
@@ -18,8 +26,12 @@ class NurseModel {
       id: json['id'],
       name: json['name'],
       specialization: json['specialization'],
-      serviceArea: List<String>.from(json['service_area'] ?? []),
-      isAvailable: json['is_available'] ?? true,
+      qualification: json['qualification'],
+      experienceYears: json['experience_years'] ?? 0,
+      phone: json['phone'],
+      email: json['email'],
+      zoneId: json['zone_id'],
+      isActive: json['is_active'] ?? true,
     );
   }
 
@@ -28,8 +40,13 @@ class NurseModel {
       'id': id,
       'name': name,
       'specialization': specialization,
-      'service_area': serviceArea,
-      'is_available': isAvailable,
+      'qualification': qualification,
+      'experience_years': experienceYears,
+      'phone': phone,
+      'email': email,
+      'zone_id': zoneId,
+      'is_active': isActive,
     };
   }
 }
+
