@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/utils/colors.dart';
+import 'chat_screen.dart';
 
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
@@ -222,10 +223,16 @@ class HelpSupportScreen extends StatelessWidget {
   }
 
   void _startLiveChat(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Starting live chat...'),
-        backgroundColor: AppColors.primary,
+    // Navigate to ChatScreen for support
+    // For now using a placeholder ID for 'Support'. 
+    // This should be replaced with a real Admin/Support User ID from Supabase.
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ChatScreen(
+          otherUserId: 'support_admin_001',
+          otherUserName: 'AASHA Support',
+        ),
       ),
     );
   }

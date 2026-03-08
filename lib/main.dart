@@ -17,6 +17,7 @@ import 'providers/notification_provider.dart';
 import 'providers/medicine_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/diagnostics_provider.dart';
+import 'providers/chat_provider.dart';
 import 'screens/main_navigation.dart';
 import 'screens/splash_screen.dart';
 import 'utils/colors.dart';
@@ -68,6 +69,7 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => MedicineProvider()),
         ChangeNotifierProvider(create: (_) => AdminProvider()),
         ChangeNotifierProvider(create: (_) => DiagnosticsProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
