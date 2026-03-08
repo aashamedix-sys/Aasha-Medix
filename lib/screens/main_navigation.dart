@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/colors.dart';
 import 'splash_screen.dart';
 import 'home_screen.dart';
@@ -129,6 +130,8 @@ class AashaDostBottomSheet extends StatefulWidget {
 
 class _AashaDostBottomSheetState extends State<AashaDostBottomSheet> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _isFetchingResponse = false;
   final List<ChatMessage> _messages = [
     ChatMessage(
       text:
@@ -138,57 +141,76 @@ class _AashaDostBottomSheetState extends State<AashaDostBottomSheet> {
     ),
   ];
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
+  void _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty || _isFetchingResponse) return;
 
     setState(() {
       _messages.add(
         ChatMessage(
-          text: _messageController.text,
+          text: text,
           isUser: true,
           timestamp: DateTime.now(),
         ),
       );
-
-      // Simulate AI response
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) {
-          setState(() {
-            _messages.add(
-              ChatMessage(
-                text: _getAIResponse(_messageController.text),
-                isUser: false,
-                timestamp: DateTime.now(),
-              ),
-            );
-          });
-        }
-      });
+      _isFetchingResponse = true;
     });
 
     _messageController.clear();
-  }
+    _scrollToBottom();
 
-  String _getAIResponse(String userMessage) {
-    final message = userMessage.toLowerCase();
-
-    if (message.contains('hello') || message.contains('hi')) {
-      return "Hello! How are you feeling today? I'm here to help with any health-related questions.";
-    } else if (message.contains('appointment') || message.contains('book')) {
-      return "I can help you book an appointment! Would you like me to guide you through the booking process?";
-    } else if (message.contains('test') || message.contains('lab')) {
-      return "For lab tests, you can browse our services section. We offer home collection for most tests. What type of test are you looking for?";
-    } else if (message.contains('report') || message.contains('result')) {
-      return "Your test reports are available in the Reports section. You can view, download, or share them anytime.";
-    } else if (message.contains('medicine') ||
-        message.contains('prescription')) {
-      return "For medicines, you can use our Order Medicine feature. Do you have a prescription ready?";
-    } else if (message.contains('emergency') || message.contains('urgent')) {
-      return "For medical emergencies, please call emergency services immediately at 108 or visit the nearest hospital.";
-    } else {
-      return "I'm here to help with health-related questions, appointment booking, test information, and general medical guidance. What specific health concern can I assist you with?";
+    try {
+      final reply = await _fetchAIResponse(text);
+      if (mounted) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: reply,
+              isUser: false,
+              timestamp: DateTime.now(),
+            ),
+          );
+          _isFetchingResponse = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: "Sorry, I'm having trouble connecting: $e",
+              isUser: false,
+              timestamp: DateTime.now(),
+            ),
+          );
+          _isFetchingResponse = false;
+        });
+        _scrollToBottom();
+      }
     }
   }
+
+  Future<String> _fetchAIResponse(String userMessage) async {
+    final response = await Supabase.instance.client.functions.invoke(
+      'aasha-dost-ai',
+      body: {'message': userMessage},
+    );
+    final data = response.data as Map<String, dynamic>?;
+    return data?['reply'] ?? 'Received empty response';
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -252,9 +274,16 @@ class _AashaDostBottomSheetState extends State<AashaDostBottomSheet> {
           // Chat messages
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
+              itemCount: _messages.length + (_isFetchingResponse ? 1 : 0),
               itemBuilder: (context, index) {
+                if (index == _messages.length) {
+                  return const Center(child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                  ));
+                }
                 final message = _messages[index];
                 return ChatBubble(message: message);
               },
@@ -283,11 +312,12 @@ class _AashaDostBottomSheetState extends State<AashaDostBottomSheet> {
                       ),
                     ),
                     onSubmitted: (_) => _sendMessage(),
+                    enabled: !_isFetchingResponse,
                   ),
                 ),
                 const SizedBox(width: 8),
                 FloatingActionButton(
-                  onPressed: _sendMessage,
+                  onPressed: _isFetchingResponse ? null : _sendMessage,
                   mini: true,
                   backgroundColor: const Color(0xFF2E7D32),
                   child: const Icon(Icons.send),
