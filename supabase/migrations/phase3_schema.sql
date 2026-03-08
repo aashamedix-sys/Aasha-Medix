@@ -287,73 +287,138 @@ ALTER TABLE admin_kpis           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scale_readiness_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE nurses               ENABLE ROW LEVEL SECURITY;
 
--- diagnostic_tests and health_packages: publicly readable
-CREATE POLICY IF NOT EXISTS "Public read diagnostic_tests"
+-- ──────────────────────────────────────────────────────────────────────
+-- diagnostic_tests — publicly readable
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Public read diagnostic_tests" ON diagnostic_tests;
+CREATE POLICY "Public read diagnostic_tests"
   ON diagnostic_tests FOR SELECT USING (true);
 
-CREATE POLICY IF NOT EXISTS "Public read health_packages"
+-- ──────────────────────────────────────────────────────────────────────
+-- health_packages — publicly readable
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Public read health_packages" ON health_packages;
+CREATE POLICY "Public read health_packages"
   ON health_packages FOR SELECT USING (true);
 
--- doctors: publicly readable active doctors
-CREATE POLICY IF NOT EXISTS "Public read active doctors"
+-- ──────────────────────────────────────────────────────────────────────
+-- doctors — public read for active doctors
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Public read active doctors" ON doctors;
+CREATE POLICY "Public read active doctors"
   ON doctors FOR SELECT USING (is_active = true);
 
--- doctor_availability: public read
-CREATE POLICY IF NOT EXISTS "Public read doctor availability"
+-- ──────────────────────────────────────────────────────────────────────
+-- doctor_availability — public read
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Public read doctor availability" ON doctor_availability;
+CREATE POLICY "Public read doctor availability"
   ON doctor_availability FOR SELECT USING (is_active = true);
 
--- consultation_slots: public read
-CREATE POLICY IF NOT EXISTS "Public read consultation slots"
+-- ──────────────────────────────────────────────────────────────────────
+-- consultation_slots — public read
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Public read consultation slots" ON consultation_slots;
+CREATE POLICY "Public read consultation slots"
   ON consultation_slots FOR SELECT USING (true);
 
--- zones: public read
-CREATE POLICY IF NOT EXISTS "Public read zones"
+-- ──────────────────────────────────────────────────────────────────────
+-- zones — public read
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Public read zones" ON zones;
+CREATE POLICY "Public read zones"
   ON zones FOR SELECT USING (true);
 
--- patients: own row only
-CREATE POLICY IF NOT EXISTS "Patients: own row select"
+-- ──────────────────────────────────────────────────────────────────────
+-- patients — own row only
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Patients: own row select" ON patients;
+CREATE POLICY "Patients: own row select"
   ON patients FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS "Patients: own row insert"
+DROP POLICY IF EXISTS "Patients: own row insert" ON patients;
+CREATE POLICY "Patients: own row insert"
   ON patients FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS "Patients: own row update"
+DROP POLICY IF EXISTS "Patients: own row update" ON patients;
+CREATE POLICY "Patients: own row update"
   ON patients FOR UPDATE USING (auth.uid() = user_id);
 
--- bookings: own row only (via patients join)
-CREATE POLICY IF NOT EXISTS "Bookings: read own"
+-- ──────────────────────────────────────────────────────────────────────
+-- bookings — patient owns their bookings only
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Bookings: read own" ON bookings;
+CREATE POLICY "Bookings: read own"
   ON bookings FOR SELECT
   USING (patient_id IN (SELECT id FROM patients WHERE user_id = auth.uid()));
 
-CREATE POLICY IF NOT EXISTS "Bookings: insert own"
+DROP POLICY IF EXISTS "Bookings: insert own" ON bookings;
+CREATE POLICY "Bookings: insert own"
   ON bookings FOR INSERT
   WITH CHECK (patient_id IN (SELECT id FROM patients WHERE user_id = auth.uid()));
 
--- medicine_orders: patient-owned
-CREATE POLICY IF NOT EXISTS "Medicine orders: read own"
+-- ──────────────────────────────────────────────────────────────────────
+-- nursing_requests — patient can view their own via bookings
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Nursing requests: read own" ON nursing_requests;
+CREATE POLICY "Nursing requests: read own"
+  ON nursing_requests FOR SELECT
+  USING (
+    booking_id IN (
+      SELECT id FROM bookings
+      WHERE patient_id IN (SELECT id FROM patients WHERE user_id = auth.uid())
+    )
+  );
+
+DROP POLICY IF EXISTS "Nursing requests: insert own" ON nursing_requests;
+CREATE POLICY "Nursing requests: insert own"
+  ON nursing_requests FOR INSERT
+  WITH CHECK (
+    booking_id IN (
+      SELECT id FROM bookings
+      WHERE patient_id IN (SELECT id FROM patients WHERE user_id = auth.uid())
+    )
+  );
+
+-- ──────────────────────────────────────────────────────────────────────
+-- medicine_orders — patient-owned
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Medicine orders: read own" ON medicine_orders;
+CREATE POLICY "Medicine orders: read own"
   ON medicine_orders FOR SELECT
   USING (patient_id IN (SELECT id FROM patients WHERE user_id = auth.uid()));
 
-CREATE POLICY IF NOT EXISTS "Medicine orders: insert own"
+DROP POLICY IF EXISTS "Medicine orders: insert own" ON medicine_orders;
+CREATE POLICY "Medicine orders: insert own"
   ON medicine_orders FOR INSERT
   WITH CHECK (patient_id IN (SELECT id FROM patients WHERE user_id = auth.uid()));
 
--- reports: patient-owned
-CREATE POLICY IF NOT EXISTS "Reports: read own"
+-- ──────────────────────────────────────────────────────────────────────
+-- reports — patient-owned
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Reports: read own" ON reports;
+CREATE POLICY "Reports: read own"
   ON reports FOR SELECT
   USING (patient_id IN (SELECT id FROM patients WHERE user_id = auth.uid()));
 
--- chat_rooms: participants only
-CREATE POLICY IF NOT EXISTS "Chat rooms: participants read"
+-- ──────────────────────────────────────────────────────────────────────
+-- chat_rooms — patient participants only
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Chat rooms: participants read" ON chat_rooms;
+CREATE POLICY "Chat rooms: participants read"
   ON chat_rooms FOR SELECT
   USING (patient_id IN (SELECT id FROM patients WHERE user_id = auth.uid()));
 
-CREATE POLICY IF NOT EXISTS "Chat rooms: patient create"
+DROP POLICY IF EXISTS "Chat rooms: patient create" ON chat_rooms;
+CREATE POLICY "Chat rooms: patient create"
   ON chat_rooms FOR INSERT
   WITH CHECK (patient_id IN (SELECT id FROM patients WHERE user_id = auth.uid()));
 
--- chat_messages: room participants only
-CREATE POLICY IF NOT EXISTS "Chat messages: read by room participant"
+-- ──────────────────────────────────────────────────────────────────────
+-- chat_messages — room participants only
+-- ──────────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Chat messages: read by room participant" ON chat_messages;
+CREATE POLICY "Chat messages: read by room participant"
   ON chat_messages FOR SELECT
   USING (
     room_id IN (
@@ -362,7 +427,8 @@ CREATE POLICY IF NOT EXISTS "Chat messages: read by room participant"
     )
   );
 
-CREATE POLICY IF NOT EXISTS "Chat messages: insert by sender"
+DROP POLICY IF EXISTS "Chat messages: insert by sender" ON chat_messages;
+CREATE POLICY "Chat messages: insert by sender"
   ON chat_messages FOR INSERT
   WITH CHECK (sender_id = auth.uid());
 
