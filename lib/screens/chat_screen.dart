@@ -32,10 +32,12 @@ class _ChatScreenState extends State<ChatScreen> {
       final chatProvider = context.read<ChatProvider>();
       
       if (authProvider.isAuthenticated) {
-        final currentUserId = authProvider.userId;
-        chatProvider.loadMessages(currentUserId!, widget.otherUserId);
-        chatProvider.setupRealtime(currentUserId, widget.otherUserId);
-        chatProvider.markAsRead(widget.otherUserId, currentUserId);
+        final currentUserId = authProvider.user?.id;
+        if (currentUserId != null) {
+          chatProvider.loadMessages(currentUserId, widget.otherUserId);
+          chatProvider.setupRealtime(currentUserId, widget.otherUserId);
+          chatProvider.markAsRead(widget.otherUserId, currentUserId);
+        }
       }
     });
   }
@@ -69,7 +71,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       await chatProvider.sendMessage(
-        senderId: authProvider.userId!,
+        senderId: authProvider.user!.id,
         recipientId: widget.otherUserId,
         message: text,
       );
@@ -131,7 +133,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   itemCount: provider.messages.length,
                   itemBuilder: (context, index) {
                     final message = provider.messages[index];
-                    final isMe = message.senderId == context.read<AuthProvider>().userId;
+                    final isMe = message.senderId == context.read<AuthProvider>().user?.id;
                     return _buildMessageBubble(message, isMe);
                   },
                 );
@@ -206,7 +208,7 @@ class _ChatScreenState extends State<ChatScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, -2),
             blurRadius: 10,
           ),

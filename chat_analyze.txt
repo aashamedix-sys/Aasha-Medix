@@ -1,0 +1,8 @@
+Analyzing 4 items...                                            
+
+  error - The getter 'userId' isn't defined for the type 'AuthProvider' - lib\screens\chat_screen.dart:35:44 - undefined_getter
+  error - The getter 'userId' isn't defined for the type 'AuthProvider' - lib\screens\chat_screen.dart:72:32 - undefined_getter
+  error - The getter 'userId' isn't defined for the type 'AuthProvider' - lib\screens\chat_screen.dart:134:83 - undefined_getter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\chat_screen.dart:209:33 - deprecated_member_use
+
+4 issues found. (ran in 1.5s)
