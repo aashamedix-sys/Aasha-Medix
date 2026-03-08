@@ -1,3 +1,28 @@
+// ============================================================
+// DEPRECATED — DO NOT USE IN PRODUCTION CODE
+// File: lib/data/diagnostics_data.dart
+//
+// This file contains hardcoded static diagnostics data that
+// was previously used as a fallback when Supabase queries failed.
+//
+// As of v2.1, ALL data must come from Supabase tables:
+//   - diagnostic_tests
+//   - health_packages
+//
+// This file is kept ONLY as a reference for populating
+// Supabase seed data. DO NOT import this file in any service,
+// provider, or screen.
+//
+// If you need to seed Supabase, use this data directly in the
+// Supabase SQL editor, NOT through the Flutter app.
+// ============================================================
+
+// ignore_for_file: unused_element
+@Deprecated(
+  'Use DiagnosticsService.fetchTests() and DiagnosticsService.fetchPackages() '
+  'which query Supabase directly. This static data is only kept for seeding reference.',
+)
+// ignore_for_file: deprecated_member_use_from_same_package
 import '../models/diagnostics_models.dart';
 
 class DiagnosticsData {

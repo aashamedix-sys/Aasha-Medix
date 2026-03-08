@@ -1,5 +1,21 @@
 import 'package:flutter/material.dart';
-import '../utils/colors.dart';
+import '../core/utils/colors.dart';
+
+// ============================================================
+// AASHA DOST — AI Health Assistant Screen
+//
+// IMPORTANT: As of v2.1, the hardcoded _getAIResponse logic
+// has been REMOVED. The AI backend is NOT yet implemented.
+//
+// Current state: The UI is fully functional. When a user sends
+// a message, the screen calls _fetchAIResponse() which is
+// currently a stub. Once the Supabase Edge Function
+// "aasha-dost-ai" is deployed and the AI API is configured,
+// implement the HTTP call inside _fetchAIResponse().
+//
+// DO NOT restore the switch-case hardcoded response logic.
+// All AI responses MUST come from the backend.
+// ============================================================
 
 class AashaDostScreen extends StatefulWidget {
   const AashaDostScreen({super.key});
@@ -10,63 +26,98 @@ class AashaDostScreen extends StatefulWidget {
 
 class _AashaDostScreenState extends State<AashaDostScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _isFetchingResponse = false;
+
   final List<ChatMessage> _messages = [
     ChatMessage(
       text:
-          "Hello! I'm AASHA DOST, your AI health assistant. How can I help you today?",
+          "Hello! I'm AASHA DOST, your AI health assistant. I'm currently connecting to the backend. Please wait a moment.",
       isUser: false,
       timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
     ),
   ];
 
   void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
+    final text = _messageController.text.trim();
+    if (text.isEmpty || _isFetchingResponse) return;
 
     setState(() {
-      _messages.add(
-        ChatMessage(
-          text: _messageController.text,
-          isUser: true,
-          timestamp: DateTime.now(),
-        ),
-      );
-
-      // Simulate AI response
-      Future.delayed(const Duration(seconds: 1), () {
-        setState(() {
-          _messages.add(
-            ChatMessage(
-              text: _getAIResponse(_messageController.text),
-              isUser: false,
-              timestamp: DateTime.now(),
-            ),
-          );
-        });
-      });
+      _messages.add(ChatMessage(
+        text: text,
+        isUser: true,
+        timestamp: DateTime.now(),
+      ));
+      _isFetchingResponse = true;
     });
-
     _messageController.clear();
+
+    // Scroll to bottom after sending
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+
+    _fetchAIResponse(text).then((response) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(ChatMessage(
+          text: response,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+        _isFetchingResponse = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    }).catchError((error) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(ChatMessage(
+          text:
+              'Sorry, I could not reach the AI backend. Please try again later.\n\nError: $error',
+          isUser: false,
+          timestamp: DateTime.now(),
+          isError: true,
+        ));
+        _isFetchingResponse = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    });
   }
 
-  String _getAIResponse(String userMessage) {
-    // Simple mock responses - in real app this would come from AI API
-    final message = userMessage.toLowerCase();
+  /// Stub — to be replaced with real Supabase Edge Function call.
+  ///
+  /// Implementation target:
+  ///   POST https://<supabase-url>/functions/v1/aasha-dost-ai
+  ///   Headers: Authorization: Bearer <anon-key>
+  ///   Body: { "message": userMessage }
+  ///
+  /// Expected response: { "reply": "AI response text" }
+  Future<String> _fetchAIResponse(String userMessage) async {
+    // TODO(Phase 5): Replace with real Edge Function HTTP call.
+    // Example:
+    // final response = await http.post(
+    //   Uri.parse('${EnvConfig.supabaseUrl}/functions/v1/aasha-dost-ai'),
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': 'Bearer ${EnvConfig.supabaseAnonKey}',
+    //   },
+    //   body: jsonEncode({'message': userMessage}),
+    // );
+    // if (response.statusCode != 200) throw Exception('AI API error: ${response.statusCode}');
+    // return jsonDecode(response.body)['reply'] as String;
 
-    if (message.contains('hello') || message.contains('hi')) {
-      return "Hello! How are you feeling today? I'm here to help with any health-related questions.";
-    } else if (message.contains('appointment') || message.contains('book')) {
-      return "I can help you book an appointment! Would you like me to guide you through the booking process?";
-    } else if (message.contains('test') || message.contains('lab')) {
-      return "For lab tests, you can browse our services section. We offer home collection for most tests. What type of test are you looking for?";
-    } else if (message.contains('report') || message.contains('result')) {
-      return "Your test reports are available in the Reports section. You can view, download, or share them anytime.";
-    } else if (message.contains('medicine') ||
-        message.contains('prescription')) {
-      return "For medicines, you can use our Order Medicine feature. Do you have a prescription ready?";
-    } else if (message.contains('emergency') || message.contains('urgent')) {
-      return "For medical emergencies, please call emergency services immediately at 108 or visit the nearest hospital.";
-    } else {
-      return "I'm here to help with health-related questions, appointment booking, test information, and general medical guidance. What specific health concern can I assist you with?";
+    // Until Phase 5 is implemented, throw a clear error so it is never
+    // confused with working AI functionality.
+    throw UnimplementedError(
+        'AASHA DOST AI backend is not yet implemented. '
+        'See Phase 5 of the AASHA MEDIX backend integration plan.');
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     }
   }
 
@@ -94,8 +145,8 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  'Your AI Health Assistant',
-                  style: TextStyle(fontSize: 12, color: Colors.white70),
+                  'AI Health Assistant — Backend Integration Pending',
+                  style: TextStyle(fontSize: 11, color: Colors.white70),
                 ),
               ],
             ),
@@ -107,16 +158,42 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
       ),
       body: Column(
         children: [
+          // Backend pending banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.amber.shade100,
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.amber, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'AI backend (Phase 5) is pending. Responses may show errors until EdgeFunction is deployed.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.amber.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // Chat messages
           Expanded(
             child: Container(
               decoration: const BoxDecoration(color: Color(0xFFF5F5F5)),
               child: ListView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
-                itemCount: _messages.length,
+                itemCount: _messages.length + (_isFetchingResponse ? 1 : 0),
                 itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  return _buildMessageBubble(message);
+                  if (index == _messages.length) {
+                    // Typing indicator
+                    return _buildTypingIndicator();
+                  }
+                  return _buildMessageBubble(_messages[index]);
                 },
               ),
             ),
@@ -152,6 +229,7 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
                     maxLines: null,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _sendMessage(),
+                    enabled: !_isFetchingResponse,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -159,12 +237,14 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: _isFetchingResponse
+                        ? Colors.grey
+                        : AppColors.primary,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.send, color: Colors.white),
-                    onPressed: _sendMessage,
+                    onPressed: _isFetchingResponse ? null : _sendMessage,
                   ),
                 ),
               ],
@@ -175,7 +255,53 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
     );
   }
 
+  Widget _buildTypingIndicator() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 8),
+            Text('Connecting to AI backend...',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(ChatMessage message) {
+    final Color bgColor = message.isError
+        ? Colors.red.shade50
+        : message.isUser
+            ? AppColors.primary
+            : Colors.white;
+
+    final Color textColor = message.isError
+        ? Colors.red.shade800
+        : message.isUser
+            ? Colors.white
+            : AppColors.textPrimary;
+
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -185,7 +311,7 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: message.isUser ? AppColors.primary : Colors.white,
+          color: bgColor,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -207,12 +333,26 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (message.isError)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      'Backend Error',
+                      style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
             Text(
               message.text,
-              style: TextStyle(
-                color: message.isUser ? Colors.white : AppColors.textPrimary,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: textColor, fontSize: 16),
             ),
             const SizedBox(height: 4),
             Text(
@@ -235,6 +375,7 @@ class _AashaDostScreenState extends State<AashaDostScreen> {
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }
@@ -243,10 +384,12 @@ class ChatMessage {
   final String text;
   final bool isUser;
   final DateTime timestamp;
+  final bool isError;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     required this.timestamp,
+    this.isError = false,
   });
 }
