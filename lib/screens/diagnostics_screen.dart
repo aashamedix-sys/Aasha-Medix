@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
-import '../models/diagnostics_models.dart';
-import '../data/diagnostics_data.dart';
-import '../models/booking_model.dart';
+import 'package:provider/provider.dart';
 import 'booking_summary_screen.dart';
+import '../providers/diagnostics_provider.dart';
+import '../widgets/test_card.dart';
+import '../models/test_model.dart';
+import '../models/diagnostics_models.dart';
+import '../models/booking_model.dart';
+import '../utils/colors.dart';
+import '../widgets/shared_ui_components.dart';
 
 class DiagnosticsScreen extends StatefulWidget {
   const DiagnosticsScreen({super.key});
@@ -26,17 +31,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadData();
-  }
-
-  void _loadData() {
-    _allTests = DiagnosticsData.getCommonTests()
-        .where((t) => t.isActive)
-        .toList();
-    _allPackages = DiagnosticsData.getHealthPackages();
-    _filteredTests = _allTests;
-    _filteredPackages = _allPackages;
-    setState(() => _isLoading = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DiagnosticsProvider>().fetchDiagnostics();
+    });
   }
 
   void _filterTests(String query) {
@@ -147,289 +144,258 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final diagnosticsProvider = context.watch<DiagnosticsProvider>();
+    final isLoading = diagnosticsProvider.isLoading;
+    final error = diagnosticsProvider.error;
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Diagnostics'),
-        backgroundColor: const Color(0xFF2E7D32),
+        backgroundColor: AppColors.primaryGreen,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Tests'),
-            Tab(text: 'Packages'),
-          ],
           indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          indicatorWeight: 3,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          tabs: const [
+            Tab(text: 'All Tests'),
+            Tab(text: 'Health Packages'),
+          ],
         ),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-              ),
-              onChanged: _onSearchChanged,
+      body: LoadingOverlay(
+        isLoading: isLoading,
+        child: Column(
+          children: [
+            _buildSearchBar(),
+            Expanded(
+              child: error != null
+                  ? ConnectionErrorWidget(
+                      message: error.message,
+                      onRetry: () => diagnosticsProvider.fetchDiagnostics(),
+                    )
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildTestsList(diagnosticsProvider.tests),
+                        _buildPackagesList(diagnosticsProvider.packages),
+                      ],
+                    ),
             ),
-          ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : TabBarView(
-                    controller: _tabController,
-                    children: [_buildTestsTab(), _buildPackagesTab()],
-                  ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTestsTab() {
-    if (_filteredTests.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'No active tests available right now. Please check back later.',
-            textAlign: TextAlign.center,
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryGreen,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
+      child: TextField(
+        controller: _searchController,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: 'Search for tests or packages...',
+          hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+          prefixIcon: const Icon(Icons.search, color: Colors.white),
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.2),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
         ),
-      );
+        onChanged: (value) => setState(() {}),
+      ),
+    );
+  }
+
+  Widget _buildTestsList(List<TestItem> tests) {
+    final query = _searchController.text.toLowerCase();
+    final filtered = tests.where((t) => 
+      t.testName.toLowerCase().contains(query) || 
+      t.category.toLowerCase().contains(query)
+    ).toList();
+
+    if (filtered.isEmpty && !context.read<DiagnosticsProvider>().isLoading) {
+      return const Center(child: Text('No tests found.'));
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _filteredTests.length,
+      itemCount: filtered.length,
       itemBuilder: (context, index) {
-        final test = _filteredTests[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  test.testName,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              if (test.isPopular)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade100,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text(
-                                    'Popular',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            test.category,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            test.description.isNotEmpty
-                                ? test.description
-                                : 'Details available at center',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade700,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '₹${test.price.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E7D32),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.science, size: 16, color: Colors.grey.shade600),
-                    const SizedBox(width: 4),
-                    Text(
-                      test.sampleType,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(
-                      Icons.access_time,
-                      size: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      test.reportingTime,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _bookTest(test),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Book Now'),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        final testItem = filtered[index];
+        // Convert TestItem to TestModel for TestCard
+        final testModel = TestModel(
+          id: testItem.testId,
+          name: testItem.testName,
+          category: testItem.category,
+          price: testItem.price,
+          description: testItem.description,
+          sampleType: testItem.sampleType,
+          timeRequired: testItem.reportingTime.contains('Day') ? 720 : 1440, // Rough conversion
+        );
+
+        return TestCard(
+          test: testModel,
+          onTap: () => _bookTest(testItem),
+          onBookNow: () => _bookTest(testItem),
         );
       },
     );
   }
 
-  Widget _buildPackagesTab() {
+  Widget _buildPackagesList(List<HealthPackage> packages) {
+    final query = _searchController.text.toLowerCase();
+    final filtered = packages.where((p) => 
+      p.packageName.toLowerCase().contains(query) || 
+      p.description.toLowerCase().contains(query)
+    ).toList();
+
+    if (filtered.isEmpty && !context.read<DiagnosticsProvider>().isLoading) {
+      return const Center(child: Text('No packages found.'));
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _filteredPackages.length,
+      itemCount: filtered.length,
       itemBuilder: (context, index) {
-        final package = _filteredPackages[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        final package = filtered[index];
+        return _buildPackageCard(package);
+      },
+    );
+  }
+
+  Widget _buildPackageCard(HealthPackage package) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 120,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primaryGreen, AppColors.primaryGreen.withOpacity(0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Stack(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            package.packageName,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${package.includedTests.length} tests included',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '₹${package.discountedPrice.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E7D32),
-                          ),
-                        ),
-                        Text(
-                          '₹${package.originalPrice.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                        Text(
-                          'Save ₹${package.savings.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.green,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                Positioned(
+                  right: -20,
+                  top: -20,
+                  child: Icon(
+                    Icons.health_and_safety,
+                    size: 150,
+                    color: Colors.white.withOpacity(0.1),
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  package.description,
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _bookPackage(package),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        package.packageName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    child: const Text('Book Package'),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${package.includedTests.length} Tests Included',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  package.description,
+                  style: TextStyle(color: Colors.grey.shade700, height: 1.4),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '₹${package.originalPrice.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            decoration: TextDecoration.lineThrough,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          '₹${package.discountedPrice.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            color: AppColors.primaryGreen,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    ElevatedButton(
+                      onPressed: () => _bookPackage(package),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Book Now',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

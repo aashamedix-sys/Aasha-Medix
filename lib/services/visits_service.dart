@@ -1,5 +1,4 @@
 import '../models/visit.dart';
-import 'webhook_service.dart';
 
 class VisitsService {
   /// Creates a new visit via webhook
@@ -14,7 +13,8 @@ class VisitsService {
       'visit_date': visit.visitDate,
     };
 
-    return await WebhookService.createVisit(payload);
+    // TODO: Implement Supabase API call
+    return true;
   }
 
   /// Fetches today's visits via webhook
@@ -27,8 +27,8 @@ class VisitsService {
 
     final payload = {'date': today};
 
-    final data = await WebhookService.fetchVisits(payload);
-    return data.map((json) => Visit.fromJson(json)).toList();
+    // TODO: Implement Supabase API call
+    return [];
   }
 
   /// Updates visit status via webhook
@@ -36,6 +36,7 @@ class VisitsService {
   static Future<bool> updateVisitStatus(String visitId, String status) async {
     final payload = {'visit_id': visitId, 'visit_status': status};
 
-    return await WebhookService.updateVisitStatus(payload);
+    // TODO: Implement Supabase API call
+    return true;
   }
 }

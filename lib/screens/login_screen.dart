@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../utils/app_error.dart';
+import '../utils/validators.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,6 +14,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
+  final _phoneFormKey = GlobalKey<FormState>();
+  final _otpFormKey = GlobalKey<FormState>();
   String? _verificationId;
   bool _isOTPSent = false;
 
@@ -23,6 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _sendOTP() async {
+    if (!(_phoneFormKey.currentState?.validate() ?? false)) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
       await authProvider.signInWithPhone(_phoneController.text.trim(), (
@@ -42,14 +47,19 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is AppError ? e.message : AppError.from(e).message),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
 
   Future<void> _verifyOTP() async {
+    if (!(_otpFormKey.currentState?.validate() ?? false)) return;
     if (_verificationId == null) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -61,9 +71,13 @@ class _LoginScreenState extends State<LoginScreen> {
       // Navigation will happen automatically due to auth state change
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is AppError ? e.message : AppError.from(e).message),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -94,15 +108,19 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 32),
             if (!_isOTPSent) ...[
-              TextField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  hintText: 'Enter 10-digit phone number',
-                  prefixText: '+91 ',
+              Form(
+                key: _phoneFormKey,
+                child: TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    hintText: 'Enter 10-digit phone number',
+                    prefixText: '+91 ',
+                  ),
+                  keyboardType: TextInputType.phone,
+                  maxLength: 10,
+                  validator: AppValidators.validatePhone,
                 ),
-                keyboardType: TextInputType.phone,
-                maxLength: 10,
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -112,14 +130,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     : const Text('Send OTP'),
               ),
             ] else ...[
-              TextField(
-                controller: _otpController,
-                decoration: const InputDecoration(
-                  labelText: 'OTP',
-                  hintText: 'Enter 6-digit OTP',
+              Form(
+                key: _otpFormKey,
+                child: TextFormField(
+                  controller: _otpController,
+                  decoration: const InputDecoration(
+                    labelText: 'OTP',
+                    hintText: 'Enter 6-digit OTP',
+                  ),
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  validator: AppValidators.validateOtp,
                 ),
-                keyboardType: TextInputType.number,
-                maxLength: 6,
               ),
               const SizedBox(height: 16),
               ElevatedButton(

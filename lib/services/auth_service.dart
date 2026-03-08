@@ -1,84 +1,120 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/supabase_client.dart';
+import '../models/patient_model.dart';
+import 'dart:developer';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = SupabaseClientConfig.client;
 
-  // Get current user
-  User? get currentUser => _auth.currentUser;
+  Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
+  
+  User? get currentUser => _supabase.auth.currentUser;
 
-  // Stream of auth state changes
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
-
-  // Sign in with phone number
-  Future<void> signInWithPhone(
-    String phoneNumber,
-    Function(String) onCodeSent,
-  ) async {
-    await _auth.verifyPhoneNumber(
-      phoneNumber: '+91$phoneNumber',
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        await _auth.signInWithCredential(credential);
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        throw e;
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        onCodeSent(verificationId);
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {},
+  // Patient login with phone (Supabase OTP)
+  Future<void> sendOTP(String phone) async {
+    // Supabase expects E.164 format, e.g. +91XXXXXXXXXX
+    String formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
+    await _supabase.auth.signInWithOtp(
+      phone: formattedPhone,
     );
   }
 
-  // Verify OTP
-  Future<UserCredential> verifyOTP(
-    String verificationId,
-    String smsCode,
-  ) async {
-    PhoneAuthCredential credential = PhoneAuthProvider.credential(
-      verificationId: verificationId,
-      smsCode: smsCode,
+  // Verify OTP for patient
+  Future<AuthResponse> verifyOTP(String phone, String otp, {String? acquisitionSource, String? referralCode}) async {
+    String formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
+    final response = await _supabase.auth.verifyOTP(
+      phone: formattedPhone,
+      token: otp,
+      type: OtpType.sms,
     );
-    return await _auth.signInWithCredential(credential);
+    
+    // Auto-create patient profile if it's a new user
+    if (response.user != null) {
+      await _ensurePatientProfileExists(
+        response.user!, 
+        formattedPhone, 
+        acquisitionSource: acquisitionSource,
+        referralCode: referralCode,
+      );
+    }
+    
+    return response;
   }
 
-  // Sign out
-  Future<void> signOut() async {
-    await _auth.signOut();
-  }
-
-  // Staff sign in with email and password
-  Future<UserCredential> signInWithEmail(String email, String password) async {
-    return await _auth.signInWithEmailAndPassword(
+  // Staff login with email/password
+  Future<AuthResponse> loginWithEmail(String email, String password) async {
+    return await _supabase.auth.signInWithPassword(
       email: email,
       password: password,
     );
   }
 
-  // Create user profile in Firestore
-  Future<void> createUserProfile(UserModel user) async {
-    await _firestore.collection('users').doc(user.id).set(user.toMap());
+  // Sign out
+  Future<void> signOut() async {
+    await _supabase.auth.signOut();
   }
 
-  // Get user profile
-  Future<UserModel?> getUserProfile(String userId) async {
-    DocumentSnapshot doc = await _firestore
-        .collection('users')
-        .doc(userId)
-        .get();
-    if (doc.exists) {
-      return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+  // Patient Profile handling
+  Future<void> _ensurePatientProfileExists(User user, String phone, {String? acquisitionSource, String? referralCode}) async {
+    try {
+      final existingPatient = await _supabase
+          .from('patients')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (existingPatient == null) {
+        // Generate a random referral code for the new user
+        final ownCode = "ASHA${user.id.substring(0, 4).toUpperCase()}";
+        
+        // Create new patient
+        final newPatient = PatientModel(
+          id: user.id,
+          name: 'New Patient', // Will be updated by user later
+          phone: phone,
+          address: 'Not Provided',
+          createdAt: DateTime.now(),
+          acquisitionSource: acquisitionSource,
+          ownReferralCode: ownCode,
+        );
+        await _supabase.from('patients').insert(newPatient.toJson());
+        
+        // If referred, log the referral
+        if (referralCode != null) {
+          await _trackReferral(user.id, referralCode);
+        }
+        
+        log("Created new patient profile for ${user.id}");
+      }
+    } catch (e) {
+      log("Error ensuring patient profile: $e");
     }
-    return null;
   }
 
-  // Update user profile
-  Future<void> updateUserProfile(
-    String userId,
-    Map<String, dynamic> updates,
-  ) async {
-    await _firestore.collection('users').doc(userId).update(updates);
+  Future<void> _trackReferral(String referredId, String code) async {
+    try {
+      // Find the referrer by their code
+      final referrer = await _supabase.from('patients').select('id').eq('own_referral_code', code).maybeSingle();
+      if (referrer != null) {
+        await _supabase.from('referrals').insert({
+          'referrer_id': referrer['id'],
+          'referred_id': referredId,
+          'referral_code': code,
+        });
+        log("Tracked referral from ${referrer['id']} to $referredId");
+      }
+    } catch (e) {
+      log("Error tracking referral: $e");
+    }
+  }
+
+  Future<PatientModel?> getPatientProfile(String userId) async {
+    try {
+      final res = await _supabase.from('patients').select().eq('id', userId).single();
+      return PatientModel.fromJson(res);
+    } catch (e) {
+      log("Error fetching patient profile: $e");
+      return null;
+    }
   }
 }

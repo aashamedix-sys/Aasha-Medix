@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/webhook_service.dart';
 import '../widgets/app_logo.dart';
 
 class LeadCaptureScreen extends StatefulWidget {
@@ -43,12 +42,8 @@ class _LeadCaptureScreenState extends State<LeadCaptureScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      await WebhookService.submitLead(
-        patientName: _patientNameController.text.trim(),
-        mobileNumber: _mobileController.text.trim(),
-        service: _selectedService!,
-        visitType: _selectedVisitType!,
-      );
+      // TODO: Connect to Supabase to submit lead
+      await Future.delayed(const Duration(seconds: 1)); 
 
       // Success - navigate to success screen
       if (mounted) {

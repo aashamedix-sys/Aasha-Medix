@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/test_card.dart';
 import '../models/test_model.dart';
-import '../utils/colors.dart';
+import '../core/utils/colors.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});

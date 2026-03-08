@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers/auth_provider.dart';
-import '../utils/colors.dart';
+import '../core/utils/colors.dart';
 import 'change_password_screen.dart';
 import 'help_support_screen.dart';
 import 'privacy_settings_screen.dart';

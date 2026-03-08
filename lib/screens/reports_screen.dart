@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'dart:io';
-import 'package:open_filex/open_filex.dart';
 import '../models/booking_model.dart';
 import '../models/report_model.dart';
 import '../providers/booking_provider.dart';
-import '../utils/colors.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../core/utils/colors.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -18,37 +15,8 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  // Sample report data - in real app this would come from API
-  final List<ReportModel> _reports = [
-    ReportModel(
-      id: '1',
-      bookingId: 'B001',
-      userId: '1',
-      reportUrl: 'https://example.com/report1.pdf',
-      uploadDate: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-    ReportModel(
-      id: '2',
-      bookingId: 'B002',
-      userId: '1',
-      reportUrl: 'https://example.com/report2.pdf',
-      uploadDate: DateTime.now().subtract(const Duration(days: 5)),
-    ),
-    ReportModel(
-      id: '3',
-      bookingId: 'B003',
-      userId: '1',
-      reportUrl: 'https://example.com/report3.pdf',
-      uploadDate: DateTime.now().subtract(const Duration(days: 7)),
-    ),
-    ReportModel(
-      id: '4',
-      bookingId: 'B004',
-      userId: '1',
-      reportUrl: 'https://example.com/report4.pdf',
-      uploadDate: DateTime.now().subtract(const Duration(days: 10)),
-    ),
-  ];
+  // TODO: Fetch from Supabase via ReportsProvider
+  final List<ReportModel> _reports = [];
 
   // Filter state
   DateTime? _startDate;
@@ -123,73 +91,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   void _downloadReport(ReportModel report) async {
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Downloading report...'),
-          backgroundColor: AppColors.primary,
-        ),
-      );
-
-      // Get the downloads directory
-      final directory = await getExternalStorageDirectory();
-      if (directory == null) {
-        throw Exception('Unable to access storage');
-      }
-
-      final downloadsDir = Directory('${directory.path}/Download');
-      if (!await downloadsDir.exists()) {
-        await downloadsDir.create(recursive: true);
-      }
-
-      // Download the PDF
-      final response = await http.get(Uri.parse(report.reportUrl));
-      if (response.statusCode != 200) {
-        throw Exception('Failed to download PDF');
-      }
-
-      // Save the file
-      final fileName = 'report_${report.bookingId}.pdf';
-      final filePath = '${downloadsDir.path}/$fileName';
-      final file = File(filePath);
-      await file.writeAsBytes(response.bodyBytes);
-
-      // Open the file
-      final result = await OpenFilex.open(filePath);
-      if (result.type != ResultType.done) {
-        // If can't open, at least show success
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Report downloaded to: $filePath'),
-              backgroundColor: Colors.green,
-              action: SnackBarAction(
-                label: 'Open',
-                onPressed: () => OpenFilex.open(filePath),
-              ),
-            ),
-          );
-        });
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Report downloaded and opened successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        });
-      }
-    } catch (e) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      });
-    }
+    // TODO: Implement actual secure Supabase Storage download
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Download feature requires Supabase integration'),
+        backgroundColor: Colors.orange,
+      ),
+    );
   }
 
   Widget _buildReportCard(ReportModel report) {
@@ -489,15 +397,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
         return 'Doctor Consultation';
       case ServiceType.homeSample:
         return 'Home Sample Collection';
+      case ServiceType.nursing:
+        return 'Home Nursing';
+      case ServiceType.pharmacy:
+        return 'Pharmacy Order';
     }
   }
 
   String _formatBookingStatus(BookingStatus status) {
     switch (status) {
+      case BookingStatus.pending:
+        return 'Pending';
       case BookingStatus.booked:
         return 'Booked';
-      case BookingStatus.collected:
-        return 'Sample Collected';
+      case BookingStatus.scheduled:
+        return 'Confirmed';
+      case BookingStatus.assigned:
+        return 'Assigned';
+      case BookingStatus.inProgress:
+        return 'In Progress';
       case BookingStatus.completed:
         return 'Completed';
       case BookingStatus.cancelled:
@@ -511,14 +429,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
         return 'Pending';
       case PaymentStatus.paid:
         return 'Paid';
+      case PaymentStatus.failed:
+        return 'Failed';
+      case PaymentStatus.refunded:
+        return 'Refunded';
     }
   }
 
   Color _bookingStatusColor(BookingStatus status) {
     switch (status) {
+      case BookingStatus.pending:
+        return Colors.grey;
       case BookingStatus.booked:
-        return AppColors.primary;
-      case BookingStatus.collected:
+        return Colors.blueGrey;
+      case BookingStatus.scheduled:
+        return Colors.blue;
+      case BookingStatus.assigned:
+        return Colors.indigo;
+      case BookingStatus.inProgress:
         return Colors.orange;
       case BookingStatus.completed:
         return Colors.teal;

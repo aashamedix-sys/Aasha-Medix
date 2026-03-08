@@ -17,16 +17,11 @@ class AppLogo extends StatelessWidget {
         height: size,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) {
-          return Center(
-            child: Text(
-              'Aasha Medix',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: size * 0.3,
-                fontWeight: FontWeight.bold,
-                color: color ?? Theme.of(context).colorScheme.primary,
-              ),
-            ),
+          // Fallback if image is missing
+          return Icon(
+            Icons.health_and_safety,
+            size: size,
+            color: color ?? const Color(0xFF00942A),
           );
         },
       ),

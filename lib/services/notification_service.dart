@@ -1,66 +1,110 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../core/supabase_client.dart';
+import '../models/notification_model.dart';
+import '../core/env_config.dart';
+import 'dart:developer';
 
 class NotificationService {
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
+  final SupabaseClient _supabase = SupabaseClientConfig.client;
 
-  Future<void> initialize() async {
-    // Request permission for iOS
-    await _firebaseMessaging.requestPermission();
+  /// Request FCM permission and register the device token.
+  /// Call this after user logs in.
+  Future<void> requestPermissionAndRegister() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
 
-    // Initialize local notifications
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings();
-    const InitializationSettings settings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-    await _localNotifications.initialize(settings);
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        final token = await messaging.getToken();
+        if (token != null) {
+          await registerDeviceToken(token);
+        }
 
-    // Handle background messages
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    // Handle foreground messages
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+        // Listen for token refreshes
+        messaging.onTokenRefresh.listen(registerDeviceToken);
+      }
+    } catch (e) {
+      log('Failed to request FCM permission: $e');
+    }
   }
 
-  Future<String?> getToken() async {
-    return await _firebaseMessaging.getToken();
+  /// Store the FCM device token in the `device_tokens` table.
+  Future<void> registerDeviceToken(String token) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      await _supabase.from('device_tokens').upsert(
+        {
+          'user_id': user.id,
+          'fcm_token': token,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        onConflict: 'user_id',
+      );
+      log('FCM token registered for user ${user.id}');
+    } catch (e) {
+      log('Failed to register FCM token: $e');
+    }
   }
 
-  void _handleForegroundMessage(RemoteMessage message) {
-    // Show local notification
-    _showLocalNotification(
-      title: message.notification?.title ?? 'Notification',
-      body: message.notification?.body ?? '',
-    );
+  Future<List<NotificationModel>> getMyNotifications(String userId) async {
+    final response = await _supabase
+        .from('notifications')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .limit(50);
+
+    return (response as List).map((e) => NotificationModel.fromJson(e)).toList();
   }
 
-  Future<void> _showLocalNotification({
+  Future<void> markAsRead(String notificationId) async {
+    await _supabase
+        .from('notifications')
+        .update({'is_read': true})
+        .eq('id', notificationId);
+  }
+
+  /// Trigger a push notification via Supabase Edge Function.
+  Future<void> triggerPushNotification({
+    required String userId,
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      await _supabase.functions.invoke(
+        'send-push-notification',
+        body: {
+          'user_id': userId,
+          'title': title,
+          'body': body,
+          'data': data ?? {},
+        },
+      );
+    } catch (e) {
+      log('Push notification trigger failed: $e');
+      // Not critical — just log, don't disrupt user flow
+    }
+  }
+
+  Future<void> createNotification({
+    required String userId,
     required String title,
     required String body,
   }) async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          'channel_id',
-          'channel_name',
-          importance: Importance.high,
-          priority: Priority.high,
-        );
-
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-    );
-
-    await _localNotifications.show(0, title, body, details);
+    await _supabase.from('notifications').insert({
+      'user_id': userId,
+      'title': title,
+      'body': body,
+      'is_read': false,
+    });
   }
-}
-
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Handle background message
 }

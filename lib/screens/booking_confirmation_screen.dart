@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/booking_model.dart';
-import '../utils/colors.dart';
+import '../core/utils/colors.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
   final BookingModel booking;
@@ -203,15 +203,25 @@ class BookingConfirmationScreen extends StatelessWidget {
         return 'Doctor Consultation';
       case ServiceType.homeSample:
         return 'Home Sample Collection';
+      case ServiceType.nursing:
+        return 'Home Nursing';
+      case ServiceType.pharmacy:
+        return 'Pharmacy Order';
     }
   }
 
   static String _formatStatus(BookingStatus status) {
     switch (status) {
+      case BookingStatus.pending:
+        return 'Pending';
       case BookingStatus.booked:
         return 'Booked';
-      case BookingStatus.collected:
-        return 'Collected';
+      case BookingStatus.scheduled:
+        return 'Confirmed';
+      case BookingStatus.assigned:
+        return 'Assigned';
+      case BookingStatus.inProgress:
+        return 'In Progress';
       case BookingStatus.completed:
         return 'Completed';
       case BookingStatus.cancelled:
@@ -225,6 +235,10 @@ class BookingConfirmationScreen extends StatelessWidget {
         return 'Pending';
       case PaymentStatus.paid:
         return 'Paid';
+      case PaymentStatus.failed:
+        return 'Failed';
+      case PaymentStatus.refunded:
+        return 'Refunded';
     }
   }
 

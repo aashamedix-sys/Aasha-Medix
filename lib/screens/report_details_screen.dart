@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/report_model.dart';
-import '../utils/colors.dart';
+import '../core/utils/colors.dart';
 import 'services_screen.dart';
 
 class ReportDetailsScreen extends StatelessWidget {
@@ -363,32 +363,13 @@ class ReportDetailsScreen extends StatelessWidget {
       ),
     );
 
-    // Simulate download process
-    Future.delayed(const Duration(seconds: 2), () {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Report #${report.bookingId} downloaded successfully to Downloads folder',
-            ),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'Open',
-              textColor: Colors.white,
-              onPressed: () {
-                // In a real app, this would open the downloaded file
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Opening downloaded report...'),
-                    backgroundColor: AppColors.primary,
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      }
-    });
+    // TODO: Implement actual Supabase Storage download
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Download feature requires Supabase integration'),
+        backgroundColor: Colors.orange,
+      ),
+    );
   }
 
   void _shareReport(BuildContext context) {

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../utils/colors.dart';
+import 'splash_screen.dart';
 import 'home_screen.dart';
 import 'services_screen.dart';
 import 'reports_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
-import 'admin_visits_screen.dart';
+import 'admin/admin_dashboard_screen.dart';
+import 'nurse/nurse_dashboard_screen.dart';
 import '../providers/auth_provider.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -27,8 +30,10 @@ class _MainNavigationState extends State<MainNavigation> {
       authProvider.isAuthenticated
           ? const ProfileScreen()
           : const LoginScreen(),
-      if (authProvider.isAuthenticated && authProvider.userRole == 'staff')
-        const AdminVisitsScreen(),
+      if (authProvider.isAuthenticated && authProvider.userRole == 'admin')
+        const AdminDashboardScreen(),
+      if (authProvider.isAuthenticated && authProvider.userRole == 'nurse')
+        const NurseDashboardScreen(),
     ];
   }
 
@@ -55,11 +60,17 @@ class _MainNavigationState extends State<MainNavigation> {
         selectedIcon: Icon(Icons.person),
         label: 'Profile',
       ),
-      if (authProvider.isAuthenticated && authProvider.userRole == 'staff')
+      if (authProvider.isAuthenticated && authProvider.userRole == 'admin')
         const NavigationDestination(
           icon: Icon(Icons.admin_panel_settings_outlined),
           selectedIcon: Icon(Icons.admin_panel_settings),
           label: 'Admin',
+        ),
+      if (authProvider.isAuthenticated && authProvider.userRole == 'nurse')
+        const NavigationDestination(
+          icon: Icon(Icons.medical_information_outlined),
+          selectedIcon: Icon(Icons.medical_information),
+          label: 'Nurse',
         ),
     ];
   }
@@ -83,13 +94,8 @@ class _MainNavigationState extends State<MainNavigation> {
         destinations: _destinations,
       ),
       floatingActionButton: Container(
-        margin: const EdgeInsets.only(
-          bottom: 80,
-        ), // Add margin to avoid overlap with bottom nav
-        child: FloatingActionButton(
-          tooltip: 'AASHA DOST - Your AI Health Assistant',
-          backgroundColor: const Color(0xFF2E7D32),
-          elevation: 6,
+        margin: const EdgeInsets.only(bottom: 16),
+        child: FloatingActionButton.extended(
           onPressed: () {
             showModalBottomSheet(
               context: context,
@@ -98,9 +104,18 @@ class _MainNavigationState extends State<MainNavigation> {
               builder: (context) => const AashaDostBottomSheet(),
             );
           },
-          child: const Icon(Icons.smart_toy),
+          tooltip: 'Ask AASHA DOST',
+          backgroundColor: AppColors.primaryGreen,
+          foregroundColor: Colors.white,
+          elevation: 4,
+          icon: const Icon(Icons.smart_toy_outlined),
+          label: const Text(
+            'Ask AASHA DOST',
+            style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          ),
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
@@ -308,18 +323,48 @@ class ChatBubble extends StatelessWidget {
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: message.isUser ? const Color(0xFF2E7D32) : Colors.grey[200],
-          borderRadius: BorderRadius.circular(16),
+          color: message.isUser ? AppColors.primaryGreen : Colors.grey[100],
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(message.isUser ? 16 : 0),
+            bottomRight: Radius.circular(message.isUser ? 0 : 16),
+          ),
+          boxShadow: [
+            if (message.isUser)
+              BoxShadow(
+                color: AppColors.primaryGreen.withOpacity(0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+          ],
         ),
-        child: Text(
-          message.text,
-          style: TextStyle(color: message.isUser ? Colors.white : Colors.black),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message.text,
+              style: TextStyle(
+                color: message.isUser ? Colors.white : Colors.black87,
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${message.timestamp.hour}:${message.timestamp.minute.toString().padLeft(2, '0')}',
+              style: TextStyle(
+                color: message.isUser ? Colors.white70 : Colors.grey[500],
+                fontSize: 10,
+              ),
+            ),
+          ],
         ),
       ),
     );

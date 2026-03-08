@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
-import '../utils/colors.dart';
+import '../core/utils/colors.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
