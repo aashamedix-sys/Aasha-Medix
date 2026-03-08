@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../providers/doctor_provider.dart';
+import '../models/doctor_model.dart';
+import '../services/doctor_service.dart';
 
 /// Minimal, production-ready doctor appointment flow.
 ///
@@ -21,51 +26,39 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
   int _stepIndex = 0;
 
   // Step 1
-  String? _selectedDoctor;
+  DoctorModel? _selectedDoctor;
 
   // Step 2
   DateTime? _selectedDate;
-  String? _selectedSlot;
+  Map<String, dynamic>? _selectedSlot;
 
   // Patient (prefill from local profile if present)
   String _patientName = '';
   String _patientPhone = '';
   String _patientEmail = '';
 
-  final List<String> _slots = const ['Morning', 'Afternoon', 'Evening'];
+  List<Map<String, dynamic>> _slots = [];
+  bool _isLoadingSlots = false;
+  bool _isBooking = false;
 
-  // Mock doctor list (safe default until backend ready)
-  late final List<String> _doctors;
+  late List<DoctorModel> _doctors = [];
+  final DoctorService _doctorService = DoctorService();
 
   @override
   void initState() {
     super.initState();
-    _doctors = _mockDoctorsFor(widget.specialty);
     _loadLocalProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final allDocs = context.read<DoctorProvider>().doctors;
+      setState(() {
+        _doctors = allDocs
+            .where((d) => d.specialization == widget.specialty)
+            .toList();
+      });
+    });
   }
 
-  List<String> _mockDoctorsFor(String specialty) {
-    // Keep deterministic names for predictable UX/testing.
-    switch (specialty) {
-      case 'Cardiologist':
-        return const ['Dr. Ananya Rao', 'Dr. Vikram Reddy'];
-      case 'Diabetologist':
-        return const ['Dr. Meera Sharma', 'Dr. Suresh Kumar'];
-      case 'Dermatologist':
-        return const ['Dr. Neha Singh', 'Dr. Arjun Patel'];
-      case 'Gynecologist':
-        return const ['Dr. Priya Iyer', 'Dr. Kavya Nair'];
-      case 'Pediatrician':
-        return const ['Dr. Ritu Gupta', 'Dr. Aman Verma'];
-      case 'Orthopedic':
-        return const ['Dr. Hari Prasad', 'Dr. Kiran Joshi'];
-      case 'ENT Specialist':
-        return const ['Dr. Sameer Khan', 'Dr. Lakshmi Devi'];
-      case 'General Physician':
-      default:
-        return const ['Dr. Rohit Mehta', 'Dr. Sneha Kulkarni'];
-    }
-  }
+
 
   Future<void> _loadLocalProfile() async {
     // Local storage only (does not touch backend).
@@ -79,17 +72,42 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
     });
   }
 
+  Future<void> _fetchSlots() async {
+    if (_selectedDoctor == null || _selectedDate == null) return;
+    setState(() => _isLoadingSlots = true);
+    try {
+      final slots = await _doctorService.getConsultationSlots(
+        _selectedDoctor!.id,
+        _selectedDate!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _slots = slots;
+        _selectedSlot = null; // Clear old selection
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load slots: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoadingSlots = false);
+    }
+  }
+
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: now.add(const Duration(days: 1)),
+      initialDate: _selectedDate ?? now.add(const Duration(days: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 60)),
     );
     if (picked == null) return;
     if (!mounted) return;
-    setState(() => _selectedDate = picked);
+    if (picked != _selectedDate) {
+      setState(() => _selectedDate = picked);
+      _fetchSlots();
+    }
   }
 
   bool _canContinue() {
@@ -116,7 +134,6 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
   }
 
   Future<void> _confirmBooking() async {
-    // Production-safe confirmation: success feedback with no backend dependency.
     if (_selectedDoctor == null ||
         _selectedDate == null ||
         _selectedSlot == null) {
@@ -129,30 +146,58 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
       return;
     }
 
-    if (!mounted) return;
+    setState(() => _isBooking = true);
 
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Appointment booked successfully!'),
-        content: Text(
-          'Doctor: $_selectedDoctor\n'
-          'Patient: ${_patientName.isEmpty ? 'Patient' : _patientName}\n'
-          'Date: ${_formatDate(_selectedDate!)}\n'
-          'Time Slot: $_selectedSlot',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+    try {
+      final DateTime slotTime = DateTime.parse(_selectedSlot!['slot_time']).toLocal();
+      final timeStr = DateFormat.jm().format(slotTime);
+
+      final bookingId = await _doctorService.bookConsultation(
+        doctorId: _selectedDoctor!.id,
+        slotId: _selectedSlot!['id'],
+        appointmentDate: _selectedDate!,
+        appointmentTime: timeStr,
+        testOrPackage: widget.specialty,
+        totalAmount: _selectedDoctor!.fee,
+      );
+
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Text('Appointment booked successfully!'),
+          content: Text(
+            'Booking ID: $bookingId\n\n'
+            'Doctor: ${_selectedDoctor!.name}\n'
+            'Patient: ${_patientName.isEmpty ? 'Patient' : _patientName}\n'
+            'Date: ${_formatDate(_selectedDate!)}\n'
+            'Time Slot: $timeStr',
           ),
-        ],
-      ),
-    );
-
-    if (!mounted) return;
-    Navigator.of(context).pop();
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Exit screen on success
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Booking failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isBooking = false);
+    }
   }
 
   Future<void> _addToGoogleCalendar() async {
@@ -163,8 +208,11 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
     }
 
     // Use an all-day-ish slot since we only capture Morning/Afternoon/Evening.
+    final DateTime slotTime = DateTime.parse(_selectedSlot!['slot_time']).toLocal();
+    final timeStr = DateFormat.jm().format(slotTime);
+
     final title = 'AASHA MEDIX Doctor Consultation';
-    final details = 'Your appointment with $_selectedDoctor at $_selectedSlot.';
+    final details = 'Your appointment with ${_selectedDoctor!.name} at $timeStr.';
     final location = 'AASHA MEDIX Clinic / Telemedicine';
 
     final url = Uri.https('www.google.com', '/calendar/render', {
@@ -244,21 +292,32 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 12),
-                          DropdownMenu<String>(
-                            width: MediaQuery.of(context).size.width - 32,
-                            initialSelection: _selectedDoctor,
-                            label: const Text('Select Doctor'),
-                            dropdownMenuEntries: _doctors
-                                .map(
-                                  (d) => DropdownMenuEntry<String>(
-                                    value: d,
-                                    label: d,
-                                  ),
-                                )
-                                .toList(),
-                            onSelected: (v) =>
-                                setState(() => _selectedDoctor = v),
-                          ),
+                          if (_doctors.isEmpty)
+                            const Text('No doctors available in this specialty.')
+                          else
+                            DropdownMenu<DoctorModel>(
+                              width: MediaQuery.of(context).size.width - 32,
+                              initialSelection: _selectedDoctor,
+                              label: const Text('Select Doctor'),
+                              dropdownMenuEntries: _doctors
+                                  .map(
+                                    (d) => DropdownMenuEntry<DoctorModel>(
+                                      value: d,
+                                      label: '${d.name} (₹${d.fee.toInt()})',
+                                    ),
+                                  )
+                                  .toList(),
+                              onSelected: (v) {
+                                if (v != _selectedDoctor) {
+                                  setState(() {
+                                    _selectedDoctor = v;
+                                    _selectedSlot = null; // reset slot if doc changes
+                                    _slots = [];
+                                  });
+                                  _fetchSlots();
+                                }
+                              },
+                            ),
                         ],
                       ),
                     ),
@@ -278,21 +337,35 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          DropdownMenu<String>(
-                            width: MediaQuery.of(context).size.width - 32,
-                            initialSelection: _selectedSlot,
-                            label: const Text('Time Slot'),
-                            dropdownMenuEntries: _slots
-                                .map(
-                                  (s) => DropdownMenuEntry<String>(
-                                    value: s,
-                                    label: s,
-                                  ),
-                                )
-                                .toList(),
-                            onSelected: (v) =>
-                                setState(() => _selectedSlot = v),
-                          ),
+                          if (_isLoadingSlots)
+                            const Center(child: CircularProgressIndicator())
+                          else if (_selectedDate != null && _slots.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                'No available slots for this date.',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            )
+                          else if (_slots.isNotEmpty)
+                            DropdownMenu<Map<String, dynamic>>(
+                              width: MediaQuery.of(context).size.width - 32,
+                              initialSelection: _selectedSlot,
+                              label: const Text('Time Slot'),
+                              dropdownMenuEntries: _slots
+                                  .map(
+                                    (s) {
+                                      final time = DateTime.parse(s['slot_time']).toLocal();
+                                      return DropdownMenuEntry<Map<String, dynamic>>(
+                                        value: s,
+                                        label: DateFormat.jm().format(time),
+                                      );
+                                    },
+                                  )
+                                  .toList(),
+                              onSelected: (v) =>
+                                  setState(() => _selectedSlot = v),
+                            ),
                         ],
                       ),
                     ),
@@ -304,7 +377,7 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
                         children: [
                           _SummaryRow(
                             label: 'Doctor',
-                            value: _selectedDoctor ?? '-',
+                            value: _selectedDoctor?.name ?? '-',
                           ),
                           _SummaryRow(
                             label: 'Patient',
@@ -328,14 +401,31 @@ class _DoctorAppointmentScreenState extends State<DoctorAppointmentScreen> {
                           ),
                           _SummaryRow(
                             label: 'Time Slot',
-                            value: _selectedSlot ?? '-',
+                            value: _selectedSlot == null
+                                ? '-'
+                                : DateFormat.jm().format(DateTime.parse(_selectedSlot!['slot_time']).toLocal()),
+                          ),
+                          _SummaryRow(
+                            label: 'Fee',
+                            value: _selectedDoctor == null
+                                ? '-'
+                                : '₹${_selectedDoctor!.fee.toStringAsFixed(0)}',
                           ),
                           const SizedBox(height: 16),
                           SizedBox(
                             width: double.infinity,
                             child: FilledButton(
-                              onPressed: _confirmBooking,
-                              child: const Text('Confirm Booking'),
+                              onPressed: _isBooking ? null : _confirmBooking,
+                              child: _isBooking
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text('Confirm Booking'),
                             ),
                           ),
                           const SizedBox(height: 8),
